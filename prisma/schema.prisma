@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  users     User[]
+}
+
+model User {
+  id        Int        @id @default(autoincrement())
+  username  String
+  email     String     @unique
+  password  String
+  roleId    Int        @map("role_id")
+  avatarUrl String?    @map("avatar_url")
+  bio       String?
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  role      Role       @relation(fields: [roleId], references: [id])
+  talks     Talk[]     @relation("SpeakerTalks")
+  favorites Favorite[]
+  feedbacks Feedback[]
+}
+
+model Room {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  capacity    Int
+  description String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+  schedules   Schedule[]
+}
+
+model Subject {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  talks     Talk[]
+}
+
+model Talk {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String
+  speakerId   Int        @map("speaker_id")
+  subjectId   Int        @map("subject_id")
+  duration    Int
+  level       TalkLevel  @default(intermediate)
+  status      TalkStatus @default(pending)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  speaker     User       @relation("SpeakerTalks", fields: [speakerId], references: [id])
+  subject     Subject    @relation(fields: [subjectId], references: [id])
+  schedules   Schedule[]
+  favorites   Favorite[]
+  feedbacks   Feedback[]
+}
+
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  talkId    Int      @unique @map("talk_id")
+  roomId    Int      @map("room_id")
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  talk      Talk     @relation(fields: [talkId], references: [id])
+  room      Room     @relation(fields: [roomId], references: [id])
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  talkId    Int      @map("talk_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+  talk      Talk     @relation(fields: [talkId], references: [id])
+
+  @@unique([userId, talkId])
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  talkId    Int      @map("talk_id")
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+  talk      Talk     @relation(fields: [talkId], references: [id])
+
+  @@unique([userId, talkId])
+}
+
+enum TalkLevel {
+  beginner
+  intermediate
+  advanced
+  expert
+}
+
+enum TalkStatus {
+  pending
+  accepted
+  rejected
+  scheduled
+}
