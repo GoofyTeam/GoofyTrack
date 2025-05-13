@@ -8,13 +8,14 @@
     "start": "next start",
     "lint": "next lint",
     "format": "eslint --fix \"**/*.{ts,tsx,js,jsx}\"",
-    "check": "eslint \"**/*.{ts,tsx,js,jsx}\"",
-    "prepare": "husky"
+    "check": "eslint \"**/*.{ts,tsx,js,jsx}\""
   },
   "dependencies": {
     "next": "15.3.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "@prisma/client": "^6.7.0",
+    "prisma": "^6.7.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
