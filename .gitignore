@@ -9,3 +9,5 @@ docker/mariadb/data/
 docker/*/data/
 *.log
 .windsurf
+
+.idea
