@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  # MariaDB Service
+  mariadb:
+    image: mariadb:10.9
+    container_name: goofytrack-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d
+      - ./docker/mariadb/conf:/etc/mysql/conf.d
+    networks:
+      - goofytrack-network
+
+  # Mailhog Service (Email Testing)
+  mailhog:
+    image: mailhog/mailhog
+    container_name: goofytrack-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT}:1025" # SMTP port
+      - "${MAILHOG_WEB_PORT}:8025" # Web UI port
+    networks:
+      - goofytrack-network
+      
+  # phpMyAdmin Service
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: goofytrack-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
+      UPLOAD_LIMIT: 300M
+    ports:
+      - "${PHPMYADMIN_PORT:-8080}:80"
+    depends_on:
+      - mariadb
+    networks:
+      - goofytrack-network
+
+networks:
+  goofytrack-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+    driver: local
