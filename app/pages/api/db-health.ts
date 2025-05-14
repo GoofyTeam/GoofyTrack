@@ -30,8 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     conn.release();
 
     return res.status(200).json({ status: 'ok' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('DB connection test failed:', error);
-    return res.status(500).json({ status: 'error', message: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ status: 'error', message: errorMessage });
   }
 }
