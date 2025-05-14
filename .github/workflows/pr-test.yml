@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: cd app && yarn install --frozen-lockfile
         env:
-          DATABASE_URL: mysql://goofyuser:goofypassword@localhost:3306/goofytrack
+          DATABASE_URL: postgresql://neondb_owner:npg_HjtCh9gsyAx6@ep-noisy-hill-a4awuiem-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
 
       - name: Lint code
         run: cd app && yarn lint
@@ -47,14 +47,14 @@ jobs:
       - name: Install dependencies
         run: cd app && yarn install --frozen-lockfile
         env:
-          DATABASE_URL: postgresql://neondb_owner:npg_HjtCh9gsyAx6@ep-little-glade-a4mcfgg1-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+          DATABASE_URL: postgresql://neondb_owner:npg_HjtCh9gsyAx6@ep-noisy-hill-a4awuiem-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
 
 
 
       - name: Run tests
         run: cd app && yarn test
         env:
-          DATABASE_URL: postgresql://neondb_owner:npg_HjtCh9gsyAx6@ep-little-glade-a4mcfgg1-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+          DATABASE_URL: postgresql://neondb_owner:npg_HjtCh9gsyAx6@ep-noisy-hill-a4awuiem-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -80,7 +80,7 @@ jobs:
       - name: Install dependencies
         run: cd app && yarn install --frozen-lockfile
         env:
-          DATABASE_URL: postgresql://neondb_owner:npg_HjtCh9gsyAx6@ep-little-glade-a4mcfgg1-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+          DATABASE_URL: postgresql://neondb_owner:npg_HjtCh9gsyAx6@ep-noisy-hill-a4awuiem-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
 
       - name: Build application
         run: cd app && yarn build
