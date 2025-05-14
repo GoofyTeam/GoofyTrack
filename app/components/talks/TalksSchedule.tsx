@@ -14,9 +14,11 @@ import {
 } from '@/components/ui/select';
 import { Room, ScheduledTalk, Slot, Talk } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { isOrganizer } from '@/utils/auth.utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import PlanningOverview from './PlanningOverview';
 import ScheduledTalksList from './ScheduledTalksList';
@@ -36,6 +38,8 @@ export default function TalksSchedule({
   slots,
   onScheduleTalk,
 }: TalksScheduleProps) {
+  const session = useSession();
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [selectedTalk, setSelectedTalk] = useState<string>('');
@@ -119,53 +123,57 @@ export default function TalksSchedule({
               </Select>
             </div>
 
-            {/* Sélection de la date */}
-            <div className="space-y-2">
-              <Label>Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !selectedDate && 'text-muted-foreground',
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? (
-                      format(selectedDate, 'PPP', { locale: fr })
-                    ) : (
-                      <span>Choisir une date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    initialFocus
-                    onSelect={(date) => date && setSelectedDate(date)}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            {isOrganizer(session.data?.user.roleId) && (
+              <>
+                {/* Sélection de la date */}
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !selectedDate && 'text-muted-foreground',
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? (
+                          format(selectedDate, 'PPP', { locale: fr })
+                        ) : (
+                          <span>Choisir une date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        initialFocus
+                        onSelect={(date) => date && setSelectedDate(date)}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-            {/* Sélection de la salle */}
-            <div className="space-y-2">
-              <Label htmlFor="room">Salle</Label>
-              <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                <SelectTrigger id="room">
-                  <SelectValue placeholder="Sélectionner une salle" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rooms.map((room) => (
-                    <SelectItem key={room.id} value={room.id}>
-                      {room.name} (capacité: {room.capacity})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {/* Sélection de la salle */}
+                <div className="space-y-2">
+                  <Label htmlFor="room">Salle</Label>
+                  <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+                    <SelectTrigger id="room">
+                      <SelectValue placeholder="Sélectionner une salle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rooms.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name} (capacité: {room.capacity})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             {/* Sélection du créneau */}
             <div className="space-y-2">
