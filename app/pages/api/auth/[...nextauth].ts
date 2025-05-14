@@ -1,13 +1,7 @@
-import NextAuth from 'next-auth';
+import NextAuth, { User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from '@/lib/prisma';
-
-const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
-
-if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-  throw new Error('Missing required environment variables for authentication providers.');
-}
+import bcrypt from 'bcrypt';
 
 declare module 'next-auth' {
   interface Session {
@@ -21,6 +15,10 @@ declare module 'next-auth' {
   }
 }
 
+interface ExtendedUser extends User {
+  roleId: number;
+}
+
 export default NextAuth({
   providers: [
     CredentialsProvider({
@@ -28,75 +26,93 @@ export default NextAuth({
       credentials: {
         email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
-        isRegister: { label: 'Register', type: 'hidden' },
+        isRegister: { label: 'Register', type: 'boolean' },
         name: { label: 'Name', type: 'text' },
+        role: { label: 'Role', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.error('Missing email or password');
+          throw new Error('Missing email or password');
+        }
 
-        const { email, password, name, isRegister } = credentials;
+        const { email, password, name, role, isRegister } = credentials;
 
-        if (isRegister === 'true') {
-          console.log('register');
+        try {
+          if (isRegister === 'true') {
+            // Handle registration
+            const existingUser = await prisma.user.findUnique({ where: { email } });
+            if (existingUser) {
+              console.error('User already exists');
+              throw new Error('User already exists');
+            }
 
-          return { id: email.toString(), name, email: email };
-        } else {
-          const user = await authenticateUser(email, password);
-          if (user) {
-            return user;
+            const hashedPassword = await bcrypt.hash(password, 12);
+            const newUser = await prisma.user.create({
+              data: {
+                email,
+                password: hashedPassword,
+                username: name,
+                role_id: roleToRoleId(role),
+              },
+            });
+
+            return { id: newUser.id.toString(), name: newUser.username, email: newUser.email };
+          } else {
+            // Handle login
+            const user = await prisma.user.findUnique({
+              where: { email },
+            });
+
+            if (!user) {
+              console.error('User not found');
+              throw new Error('Invalid email or password');
+            }
+
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+              console.error('Invalid password');
+              throw new Error('Invalid email or password');
+            }
+
+            return { id: user.id.toString(), name: user.username, email: user.email };
           }
-
-          throw new Error('Invalid email or password.');
+        } catch (error) {
+          console.error('Error in authorize function:', error);
+          throw new Error('Internal server error');
         }
       },
     }),
-    GoogleProvider({
-      clientId: GOOGLE_CLIENT_ID,
-      clientSecret: GOOGLE_CLIENT_SECRET,
-    }),
   ],
-  cookies: {
-    sessionToken: {
-      name: `__Secure-next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-  },
   callbacks: {
-    async signIn({ user, account }) {
-      if (!account || !user.email) throw new Error('no account');
-
-      if (account.provider === 'google') {
-        console.log('google');
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.roleId = token.roleId as number;
       }
-
-      return true; // Allow sign-in
-    },
-    async session({ session }) {
-      if (!session.user?.email) throw new Error('no account');
-
-      console.log('session');
-
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      return url.startsWith(baseUrl) ? url : baseUrl;
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.roleId = (user as ExtendedUser).roleId;
+      }
+      return token;
     },
   },
 });
 
-async function authenticateUser(email: string, password: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+const roleMap = new Map<string, number>([
+  // ['admin', 1],
+  ['organizer', 2],
+  ['speaker', 3],
+  ['attendee', 4],
+]);
 
-  if (user && user.password === Buffer.from(password).toString('base64')) {
-    return { id: user.id.toString(), name: user.username, email: user.email };
+function roleToRoleId(role: string): number {
+  const roleId = roleMap.get(role.toLowerCase());
+  if (!roleId) {
+    throw new Error(`Invalid role: ${role}`);
   }
-
-  return null;
+  return roleId;
 }

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,107 +7,120 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Role {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  users     User[]
-}
-
 model User {
-  id        Int        @id @default(autoincrement())
-  username  String
-  email     String     @unique
-  password  String
-  roleId    Int        @map("role_id")
-  avatarUrl String?    @map("avatar_url")
-  bio       String?
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-  role      Role       @relation(fields: [roleId], references: [id])
-  talks     Talk[]     @relation("SpeakerTalks")
-  favorites Favorite[]
-  feedbacks Feedback[]
+  id         Int         @id @default(autoincrement())
+  username   String      @db.VarChar(50)
+  email      String      @unique(map: "email") @db.VarChar(100)
+  password   String      @db.VarChar(255)
+  role_id    Int
+  avatarUrl  String?     @map("avatar_url") @db.VarChar(255)
+  bio        String?     @db.Text
+  created_at DateTime    @default(now()) @db.Timestamp(0)
+  updated_at DateTime    @default(now()) @db.Timestamp(0)
+  favorites  favorites[]
+  feedback   feedback[]
+  talks      talks[]
+  roles      roles       @relation(fields: [role_id], references: [id], onUpdate: Restrict, map: "users_role_id_fk")
+
+  @@index([role_id], map: "role_id")
+  @@map("users")
 }
 
-model Room {
-  id          Int        @id @default(autoincrement())
-  name        String     @unique
-  capacity    Int
-  description String?
-  createdAt   DateTime   @default(now()) @map("created_at")
-  schedules   Schedule[]
+model favorites {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  talk_id    Int
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  talks      talks    @relation(fields: [talk_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorites_talk_id_fk")
+  users      User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorites_user_id_fk")
+
+  @@unique([user_id, talk_id], map: "user_id_talk_id")
+  @@index([talk_id], map: "talk_id")
 }
 
-model Subject {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  talks     Talk[]
+model feedback {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  talk_id    Int
+  rating     Boolean
+  comment    String?  @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  talks      talks    @relation(fields: [talk_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feedback_talk_id_fk")
+  users      User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feedback_user_id_fk")
+
+  @@unique([user_id, talk_id], map: "user_id_talk_id")
+  @@index([talk_id], map: "talk_id")
 }
 
-model Talk {
-  id          Int        @id @default(autoincrement())
-  title       String
-  description String
-  speakerId   Int        @map("speaker_id")
-  subjectId   Int        @map("subject_id")
+model roles {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique(map: "name") @db.VarChar(50)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  users      User[]
+}
+
+model rooms {
+  id          Int         @id @default(autoincrement())
+  name        String      @unique(map: "name") @db.VarChar(100)
+  capacity    Int         @default(0)
+  description String?     @db.Text
+  created_at  DateTime    @default(now()) @db.Timestamp(0)
+  schedules   schedules[]
+}
+
+model schedules {
+  id         Int      @id @default(autoincrement())
+  talk_id    Int      @unique(map: "talk_id")
+  room_id    Int
+  start_time DateTime @db.DateTime(0)
+  end_time   DateTime @db.DateTime(0)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+  rooms      rooms    @relation(fields: [room_id], references: [id], onUpdate: Restrict, map: "schedules_room_id_fk")
+  talks      talks    @relation(fields: [talk_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "schedules_talk_id_fk")
+
+  @@index([room_id], map: "room_id")
+  @@index([start_time], map: "start_time")
+}
+
+model subjects {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique(map: "name") @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  talks      talks[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model talks {
+  id          Int          @id @default(autoincrement())
+  title       String       @db.VarChar(200)
+  description String       @db.Text
+  speaker_id  Int
+  subject_id  Int
   duration    Int
-  level       TalkLevel  @default(intermediate)
-  status      TalkStatus @default(pending)
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  speaker     User       @relation("SpeakerTalks", fields: [speakerId], references: [id])
-  subject     Subject    @relation(fields: [subjectId], references: [id])
-  schedules   Schedule[]
-  favorites   Favorite[]
-  feedbacks   Feedback[]
+  level       talks_level  @default(intermediate)
+  status      talks_status @default(pending)
+  created_at  DateTime     @default(now()) @db.Timestamp(0)
+  updated_at  DateTime     @default(now()) @db.Timestamp(0)
+  favorites   favorites[]
+  feedback    feedback[]
+  schedules   schedules?
+  users       User         @relation(fields: [speaker_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "talks_speaker_id_fk")
+  subjects    subjects     @relation(fields: [subject_id], references: [id], onUpdate: Restrict, map: "talks_subject_id_fk")
+
+  @@index([speaker_id], map: "speaker_id")
+  @@index([status], map: "status")
+  @@index([subject_id], map: "subject_id")
 }
 
-model Schedule {
-  id        Int      @id @default(autoincrement())
-  talkId    Int      @unique @map("talk_id")
-  roomId    Int      @map("room_id")
-  startTime DateTime @map("start_time")
-  endTime   DateTime @map("end_time")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  talk      Talk     @relation(fields: [talkId], references: [id])
-  room      Room     @relation(fields: [roomId], references: [id])
-}
-
-model Favorite {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  talkId    Int      @map("talk_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id])
-  talk      Talk     @relation(fields: [talkId], references: [id])
-
-  @@unique([userId, talkId])
-}
-
-model Feedback {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  talkId    Int      @map("talk_id")
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id])
-  talk      Talk     @relation(fields: [talkId], references: [id])
-
-  @@unique([userId, talkId])
-}
-
-enum TalkLevel {
+enum talks_level {
   beginner
   intermediate
   advanced
   expert
 }
 
-enum TalkStatus {
+enum talks_status {
   pending
   accepted
   rejected
