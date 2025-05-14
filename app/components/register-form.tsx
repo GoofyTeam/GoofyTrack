@@ -20,7 +20,7 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
     email: '',
     password: '',
     confirmPassword: '',
-    role: '',
+    role: 'attendee',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

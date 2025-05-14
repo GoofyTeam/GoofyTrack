@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -15,8 +15,8 @@ model User {
   role_id    Int
   avatarUrl  String?     @map("avatar_url") @db.VarChar(255)
   bio        String?     @db.Text
-  created_at DateTime    @default(now()) @db.Timestamp(0)
-  updated_at DateTime    @default(now()) @db.Timestamp(0)
+  created_at DateTime    @default(now()) @db.Timestamp
+  updated_at DateTime    @default(now()) @db.Timestamp
   favorites  favorites[]
   feedback   feedback[]
   talks      talks[]
@@ -30,12 +30,12 @@ model favorites {
   id         Int      @id @default(autoincrement())
   user_id    Int
   talk_id    Int
-  created_at DateTime @default(now()) @db.Timestamp(0)
+  created_at DateTime @default(now()) @db.Timestamp
   talks      talks    @relation(fields: [talk_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorites_talk_id_fk")
   users      User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorites_user_id_fk")
 
-  @@unique([user_id, talk_id], map: "user_id_talk_id")
-  @@index([talk_id], map: "talk_id")
+  @@unique([user_id, talk_id], map: "favorites_user_id_talk_id_unique")
+  @@index([talk_id], map: "favorites_talk_id_idx")
 }
 
 model feedback {
@@ -44,38 +44,38 @@ model feedback {
   talk_id    Int
   rating     Boolean
   comment    String?  @db.Text
-  created_at DateTime @default(now()) @db.Timestamp(0)
+  created_at DateTime @default(now()) @db.Timestamp
   talks      talks    @relation(fields: [talk_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feedback_talk_id_fk")
   users      User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feedback_user_id_fk")
 
-  @@unique([user_id, talk_id], map: "user_id_talk_id")
-  @@index([talk_id], map: "talk_id")
+  @@unique([user_id, talk_id], map: "feedback_user_id_talk_id_unique")
+  @@index([talk_id], map: "feedback_talk_id_idx")
 }
 
 model roles {
   id         Int      @id @default(autoincrement())
-  name       String   @unique(map: "name") @db.VarChar(50)
-  created_at DateTime @default(now()) @db.Timestamp(0)
+  name       String   @unique(map: "roles_name_unique") @db.VarChar(50)
+  created_at DateTime @default(now()) @db.Timestamp
   users      User[]
 }
 
 model rooms {
   id          Int         @id @default(autoincrement())
-  name        String      @unique(map: "name") @db.VarChar(100)
+  name        String      @unique(map: "rooms_name_unique") @db.VarChar(100)
   capacity    Int         @default(0)
   description String?     @db.Text
-  created_at  DateTime    @default(now()) @db.Timestamp(0)
+  created_at  DateTime    @default(now()) @db.Timestamp
   schedules   schedules[]
 }
 
 model schedules {
   id         Int      @id @default(autoincrement())
-  talk_id    Int      @unique(map: "talk_id")
+  talk_id    Int      @unique(map: "schedules_talk_id_unique")
   room_id    Int
-  start_time DateTime @db.DateTime(0)
-  end_time   DateTime @db.DateTime(0)
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @db.Timestamp(0)
+  start_time DateTime @db.Timestamp
+  end_time   DateTime @db.Timestamp
+  created_at DateTime @default(now()) @db.Timestamp
+  updated_at DateTime @default(now()) @db.Timestamp
   rooms      rooms    @relation(fields: [room_id], references: [id], onUpdate: Restrict, map: "schedules_room_id_fk")
   talks      talks    @relation(fields: [talk_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "schedules_talk_id_fk")
 
@@ -85,8 +85,8 @@ model schedules {
 
 model subjects {
   id         Int      @id @default(autoincrement())
-  name       String   @unique(map: "name") @db.VarChar(100)
-  created_at DateTime @default(now()) @db.Timestamp(0)
+  name       String   @unique(map: "subjects_name_unique") @db.VarChar(100)
+  created_at DateTime @default(now()) @db.Timestamp
   talks      talks[]
 }
 
@@ -100,8 +100,8 @@ model talks {
   duration    Int
   level       talks_level  @default(intermediate)
   status      talks_status @default(pending)
-  created_at  DateTime     @default(now()) @db.Timestamp(0)
-  updated_at  DateTime     @default(now()) @db.Timestamp(0)
+  created_at  DateTime     @default(now()) @db.Timestamp
+  updated_at  DateTime     @default(now()) @db.Timestamp
   favorites   favorites[]
   feedback    feedback[]
   schedules   schedules?

@@ -1,7 +1,8 @@
+import { prisma } from '@/lib/prisma';
+import { roleToRoleId } from '@/utils/auth.utils';
+import bcrypt from 'bcrypt';
 import NextAuth, { User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcrypt';
 
 declare module 'next-auth' {
   interface Session {
@@ -20,6 +21,7 @@ interface ExtendedUser extends User {
 }
 
 export default NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -48,16 +50,22 @@ export default NextAuth({
             }
 
             const hashedPassword = await bcrypt.hash(password, 12);
+            const roleId = roleToRoleId(role);
             const newUser = await prisma.user.create({
               data: {
                 email,
                 password: hashedPassword,
                 username: name,
-                role_id: roleToRoleId(role),
+                role_id: roleId,
               },
             });
 
-            return { id: newUser.id.toString(), name: newUser.username, email: newUser.email };
+            return {
+              id: newUser.id.toString(),
+              name: newUser.username,
+              email: newUser.email,
+              roleId: roleId,
+            };
           } else {
             // Handle login
             const user = await prisma.user.findUnique({
@@ -75,7 +83,12 @@ export default NextAuth({
               throw new Error('Invalid email or password');
             }
 
-            return { id: user.id.toString(), name: user.username, email: user.email };
+            return {
+              id: user.id.toString(),
+              name: user.username,
+              email: user.email,
+              roleId: user.role_id,
+            };
           }
         } catch (error) {
           console.error('Error in authorize function:', error);
@@ -101,18 +114,3 @@ export default NextAuth({
     },
   },
 });
-
-const roleMap = new Map<string, number>([
-  // ['admin', 1],
-  ['organizer', 2],
-  ['speaker', 3],
-  ['attendee', 4],
-]);
-
-function roleToRoleId(role: string): number {
-  const roleId = roleMap.get(role.toLowerCase());
-  if (!roleId) {
-    throw new Error(`Invalid role: ${role}`);
-  }
-  return roleId;
-}
