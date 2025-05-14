@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "GoofyTrack",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "goofytrack",
+      "Username": "goofyuser",
+      "PassFile": "/pgpass",
+      "SSLMode": "prefer"
+    }
+  }
+}
