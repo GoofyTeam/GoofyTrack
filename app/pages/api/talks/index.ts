@@ -35,12 +35,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const talkStatus = 'pending';
 
     /* ---------- 4. create talk ---------- */
+    // Find the subject by name (assuming 'topic' is the subject name)
+    const subject = await prisma.subjects.findUnique({
+      where: { name: data.subject },
+      select: { id: true },
+    });
+    if (!subject) return res.status(400).json({ error: 'Subject not found' });
+
     const talk = await prisma.talks.create({
       data: {
         title: data.title,
         description: data.description,
         speaker_id: userId,
-        subject_id: data.subject_id,
+        subject_id: subject.id,
         duration: data.duration,
         level: data.level,
         status: talkStatus,

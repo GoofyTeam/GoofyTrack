@@ -5,7 +5,7 @@ import { z } from 'zod';
 export const createTalkSchema = z.object({
   title: z.string().min(5, 'Le titre doit contenir au moins 5 caractères').max(200),
   description: z.string().min(20, 'La description doit contenir au moins 20 caractères'),
-  subject_id: z.number().int().positive(),
+  subject: z.string().min(1, 'Le sujet est requis'),
   duration: z.number().int().positive().max(240, 'La durée maximale est de 240 minutes'),
   level: z.nativeEnum(talks_level).default('intermediate'),
 });
