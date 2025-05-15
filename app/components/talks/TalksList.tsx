@@ -11,11 +11,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { levels } from '@/lib/mock-data';
-import { Talk } from '@/lib/types';
+import { Talk, Room } from '@/lib/types';
 import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
 import { Pencil, Plus, Trash2, CalendarPlus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import DeleteDialog from './DeleteDialog';
 import StatusBadge from './StatusBadge';
 import TalkDialog from './TalkDialog';
@@ -25,6 +25,9 @@ interface TalksListProps {
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
   onUpdateTalk: (talk: Talk) => void;
   onDeleteTalk: (talkId: string) => void;
+  // scheduledTalks: ScheduledTalk[];
+  rooms: Room[];
+  // topics: string[];
 }
 
 // Helper to generate Google Calendar event link
@@ -54,6 +57,9 @@ export default function TalksList({
   onAddTalk,
   onUpdateTalk,
   onDeleteTalk,
+  // scheduledTalks,
+  rooms = [],
+  // topics,
 }: TalksListProps) {
   const session = useSession();
 
@@ -62,6 +68,42 @@ export default function TalksList({
   const [currentTalk, setCurrentTalk] = useState<Talk | null>(null);
   const [talkToDelete, setTalkToDelete] = useState<Talk | null>(null);
   const [isNewTalk, setIsNewTalk] = useState(true);
+
+  const [filterTopic, setFilterTopic] = useState('');
+  const [filterDuration, setFilterDuration] = useState('');
+  const [filterLevel, setFilterLevel] = useState('');
+  const [filterRoom, setFilterRoom] = useState('');
+  const [filterDate, setFilterDate] = useState('');
+
+  const filteredScheduledTalks = useMemo(() => {
+    // return scheduledTalks.filtæer((st) => {
+    //   const { talk } = st;
+    //   const { slot } = st;
+    //   const { room } = st;
+    //   let ok = true;
+    //   if (filterTopic && talk.topic !== filterTopic) ok = false;
+    //   if (filterDuration && String(talk.durationMinutes) !== filterDuration) ok = false;
+    //   if (filterLevel && talk.level !== filterLevel) ok = false;
+    //   if (filterRoom && room.id !== filterRoom) ok = false;
+    //   if (filterDate && slot.date.toISOString().slice(0, 10) !== filterDate) ok = false;
+    //   return ok;
+    // });
+    return talks.filter((talk) => {
+      let ok = true;
+      if (filterTopic && talk.topic !== filterTopic) ok = false;
+      if (filterDuration && String(talk.durationMinutes) !== filterDuration) ok = false;
+      if (filterLevel && talk.level !== filterLevel) ok = false;
+      return ok;
+    });
+    // }, [scheduledTalks, filterTopic, filterDuration, filterLevel, filterRoom, filterDate]);
+  }, [talks, filterTopic, filterDuration, filterLevel, filterRoom, filterDate]);
+
+  const topics = useMemo(() => {
+    const allTopics = talks.map((talk) => talk.topic);
+    const uniqueTopics = Array.from(new Set(allTopics));
+
+    return uniqueTopics;
+  }, [talks]);
 
   const handleCreateTalk = () => {
     setIsNewTalk(true);
@@ -109,20 +151,81 @@ export default function TalksList({
           )}
       </div>
 
-      {talks.length === 0 ? (
+      <div className="mb-2 flex flex-wrap gap-4">
+        <select
+          className="rounded border px-2 py-1"
+          value={filterTopic}
+          onChange={(e) => setFilterTopic(e.target.value)}
+        >
+          <option value="">Sujet</option>
+          {topics.map((topic) => (
+            <option key={topic} value={topic}>
+              {topic}
+            </option>
+          ))}
+        </select>
+        <select
+          className="rounded border px-2 py-1"
+          value={filterDuration}
+          onChange={(e) => setFilterDuration(e.target.value)}
+        >
+          <option value="">Durée</option>
+          {[...new Set(talks.map((talk) => talk.durationMinutes))].map((d) => (
+            <option key={d} value={d}>
+              {d} min
+            </option>
+          ))}
+        </select>
+        <select
+          className="rounded border px-2 py-1"
+          value={filterLevel}
+          onChange={(e) => setFilterLevel(e.target.value)}
+        >
+          <option value="">Niveau</option>
+          {levels.map((l) => (
+            <option key={l.value} value={l.value}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="rounded border px-2 py-1"
+          value={filterRoom}
+          onChange={(e) => setFilterRoom(e.target.value)}
+        >
+          <option value="">Salle</option>
+          {rooms.map((room) => (
+            <option key={room.id} value={room.id}>
+              {room.name}
+            </option>
+          ))}
+        </select>
+        <input
+          className="rounded border px-2 py-1"
+          min={new Date().toISOString().slice(0, 10)}
+          type="date"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+        />
+      </div>
+
+      {filteredScheduledTalks.length === 0 ? (
         <div className="text-muted-foreground rounded-lg border p-8 text-center">
-          Aucun talk n'a été créé. Commencez par ajouter un nouveau talk.
+          Aucun talk ne correspond aux filtres.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {talks
+          {filteredScheduledTalks
+            // .filter((st) => {
+            //   const { talk } = st;
             .filter((talk) => {
+              // const { talk } = st;
               if (session.data?.user.id === talk.speakerId) {
                 return true;
               }
-
               return talk.status === 'accepted';
             })
+            // .map(({ talk }) => (
             .map((talk) => (
               <Card key={talk.id} className="flex h-full flex-col">
                 <CardHeader className="pb-2">
@@ -172,7 +275,6 @@ export default function TalksList({
         </div>
       )}
 
-      {/* Dialog for create/edit */}
       <TalkDialog
         isNew={isNewTalk}
         isOpen={isDialogOpen}
@@ -181,7 +283,6 @@ export default function TalksList({
         onSave={saveTalk}
       />
 
-      {/* Dialog for delete confirmation */}
       <DeleteDialog
         isOpen={isDeleteDialogOpen}
         setIsOpen={setIsDeleteDialogOpen}
