@@ -17,7 +17,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session?.user) return res.status(401).json({ error: 'Unauthenticated' });
 
   /* ---------- 2. validate body ---------- */
-  const parse = createTalkSchema.safeParse(req.body);
+  const parse = createTalkSchema.safeParse({
+    ...req.body,
+    subject: req.body.topic,
+  });
   if (!parse.success) return res.status(400).json({ error: parse.error.errors });
   const { data } = parse;
 
