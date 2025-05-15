@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { topics, levels, durations, emptyTalk } from '@/lib/mock-data';
 import { Talk, TalkLevel } from '@/lib/types';
+import { useSession } from 'next-auth/react';
 
 interface TalkDialogProps {
   isOpen: boolean;
@@ -33,11 +34,14 @@ interface TalkDialogProps {
 }
 
 export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: TalkDialogProps) {
+  const session = useSession();
   const [currentTalk, setCurrentTalk] = useState<Omit<Talk, 'id'> & { id?: string }>(emptyTalk);
 
   useEffect(() => {
     if (isOpen) {
-      setCurrentTalk(isNew ? emptyTalk : { ...talk! });
+      if (!session.data?.user.id) throw new Error('User ID is required');
+
+      setCurrentTalk(isNew ? { ...emptyTalk, speakerId: session.data.user.id } : { ...talk! });
     }
   }, [isOpen, isNew, talk]);
 

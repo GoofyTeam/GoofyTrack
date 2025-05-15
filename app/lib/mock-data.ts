@@ -164,5 +164,5 @@ export const emptyTalk: Omit<Talk, 'id'> = {
   durationMinutes: 30,
   level: 'beginner',
   status: 'pending',
-  speakerId: 'user1', // Normalement l'ID de l'utilisateur connecté
+  speakerId: '',
 };

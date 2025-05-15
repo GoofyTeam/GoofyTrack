@@ -10,29 +10,37 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { levels } from '@/lib/mock-data';
-import { Talk } from '@/lib/types';
+import { Talk, TalkStatus } from '@/lib/types';
 import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import DeleteDialog from './DeleteDialog';
 import StatusBadge from './StatusBadge';
 import TalkDialog from './TalkDialog';
 
-interface TalksListProps {
+interface PendingTalksListProps {
   talks: Talk[];
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
   onUpdateTalk: (talk: Talk) => void;
   onDeleteTalk: (talkId: string) => void;
+  onChangeTalkStatus: (talkId: string, newStatus: TalkStatus) => void;
 }
 
-export default function TalksList({
+export default function PendingTalksList({
   talks,
   onAddTalk,
   onUpdateTalk,
   onDeleteTalk,
-}: TalksListProps) {
+  onChangeTalkStatus,
+}: PendingTalksListProps) {
   const session = useSession();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,7 +86,7 @@ export default function TalksList({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Tous les talks</h2>
+        <h2 className="text-xl font-semibold">Tous les talks en attente</h2>
         {session.data?.user &&
           (isOrganizer(session.data.user.roleId) || isSpeaker(session.data.user.roleId)) && (
             <Button onClick={handleCreateTalk}>
@@ -94,13 +102,7 @@ export default function TalksList({
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {talks
-            .filter((talk) => {
-              if (session.data?.user.id === talk.speakerId) {
-                return true;
-              }
-
-              return talk.status === 'accepted';
-            })
+            .filter((talk) => talk.status === 'pending')
             .map((talk) => (
               <Card key={talk.id} className="flex h-full flex-col">
                 <CardHeader className="pb-2">
@@ -137,6 +139,22 @@ export default function TalksList({
                         </>
                       )}
                   </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        Changer le statut
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => onChangeTalkStatus(talk.id, 'accepted')}>
+                        <Check className="mr-2 h-4 w-4" /> Accepter
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onChangeTalkStatus(talk.id, 'refused')}>
+                        <X className="mr-2 h-4 w-4" /> Refuser
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </CardFooter>
               </Card>
             ))}
