@@ -1,16 +1,10 @@
 // pages/api/talks/index.ts
-import type { NextApiRequest, NextApiResponse } from 'next';
-import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
-
-const payloadSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().min(1),
-  durationMinutes: z.coerce.number().int().positive(),
-  level: z.enum(['beginner', 'intermediate', 'advanced', 'expert']),
-});
+import { createTalkSchema } from '@/schemas/talkSchemas';
+import { isConferencier } from '@/utils/auth.utils';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth/next';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -23,34 +17,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session?.user) return res.status(401).json({ error: 'Unauthenticated' });
 
   /* ---------- 2. validate body ---------- */
-  const parse = payloadSchema.safeParse(req.body);
+  const parse = createTalkSchema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: parse.error.errors });
   const { data } = parse;
 
   try {
-    /* ---------- 3. fetch role name ---------- */
-    const user = await prisma.user.findUnique({
-      where: { id: Number(session.user.id) },
-      select: {
-        id: true,
-        roles: { select: { name: true } },
-      },
-    });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    /* ---------- 3. vérifier les permissions ---------- */
+    const userId = Number(session.user.id);
+    const userRoleId = session.user.roleId;
 
-    const roleName = user.roles.name; // e.g. "attendee" | "speaker" | "admin"
-    const talkStatus = roleName === 'attendee' ? 'pending' : 'accepted';
+    const userIsConferencier = isConferencier(userRoleId);
+
+    if (!userIsConferencier) {
+      return res.status(403).json({ error: 'Seuls les conférenciers peuvent soumettre des talks' });
+    }
+
+    const talkStatus = 'pending';
 
     /* ---------- 4. create talk ---------- */
     const talk = await prisma.talks.create({
       data: {
         title: data.title,
         description: data.description,
-        speaker_id: user.id,
-        subject_id: data.subjectId,
-        duration: data.durationMinutes,
+        speaker_id: userId,
+        subject_id: data.subject_id,
+        duration: data.duration,
         level: data.level,
         status: talkStatus,
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+        subjects: true,
       },
     });
 
