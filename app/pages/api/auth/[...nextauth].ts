@@ -1,13 +1,14 @@
+import { prisma } from '@/lib/prisma';
+import { Role } from '@prisma/client';
+import bcrypt from 'bcrypt';
 import NextAuth, { User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcrypt';
 
 declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      roleId: number;
+      role: Role; // ← now an enum value
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -16,7 +17,7 @@ declare module 'next-auth' {
 }
 
 interface ExtendedUser extends User {
-  roleId: number;
+  role: Role;
 }
 
 export default NextAuth({
@@ -29,91 +30,80 @@ export default NextAuth({
         password: { label: 'Password', type: 'password' },
         isRegister: { label: 'Register', type: 'boolean' },
         name: { label: 'Name', type: 'text' },
-        role: { label: 'Role', type: 'text' },
+        role: { label: 'Role', type: 'text' }, // expect one of Role enum keys
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.error('Missing email or password');
           throw new Error('Missing email or password');
         }
 
         const { email, password, name, role, isRegister } = credentials;
 
-        try {
-          if (isRegister === 'true') {
-            // Handle registration
-            const existingUser = await prisma.user.findUnique({ where: { email } });
-            if (existingUser) {
-              console.error('User already exists');
-              throw new Error('User already exists');
-            }
-
-            const hashedPassword = await bcrypt.hash(password, 12);
-            const newUser = await prisma.user.create({
-              data: {
-                email,
-                password: hashedPassword,
-                username: name,
-                role_id: roleToRoleId(role),
-              },
-            });
-
-            return { id: newUser.id.toString(), name: newUser.username, email: newUser.email };
-          } else {
-            // Handle login
-            const user = await prisma.user.findUnique({
-              where: { email },
-            });
-
-            if (!user) {
-              console.error('User not found');
-              throw new Error('Invalid email or password');
-            }
-
-            const isPasswordValid = await bcrypt.compare(password, user.password);
-            if (!isPasswordValid) {
-              console.error('Invalid password');
-              throw new Error('Invalid email or password');
-            }
-
-            return { id: user.id.toString(), name: user.username, email: user.email };
+        if (isRegister === 'true') {
+          // ─── Registration ───────────────────────────────────────────────
+          const exists = await prisma.users.findUnique({ where: { email } });
+          if (exists) {
+            throw new Error('User already exists');
           }
-        } catch (error) {
-          console.error('Error in authorize function:', error);
-          throw new Error('Internal server error');
+
+          // hash & create with enum role
+          const hashed = await bcrypt.hash(password, 12);
+
+          // validate & coerce role string → Role enum
+          const userRole = (role && Role[role as keyof typeof Role]) || Role.USER;
+
+          const newUser = await prisma.users.create({
+            data: {
+              email,
+              password: hashed,
+              username: name!,
+              role: userRole,
+            },
+          });
+
+          return {
+            id: newUser.id.toString(),
+            name: newUser.username,
+            email: newUser.email,
+            role: newUser.role,
+          };
         }
+
+        // ─── Login ────────────────────────────────────────────────────────
+        const user = await prisma.users.findUnique({ where: { email } });
+        if (!user) {
+          throw new Error('Invalid email or password');
+        }
+
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
+          throw new Error('Invalid email or password');
+        }
+
+        return {
+          id: user.id.toString(),
+          name: user.username,
+          email: user.email,
+          role: user.role,
+        };
       },
     }),
   ],
+
   callbacks: {
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.roleId = token.roleId as number;
-      }
-      return session;
-    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.roleId = (user as ExtendedUser).roleId;
+        token.role = (user as ExtendedUser).role;
       }
       return token;
+    },
+
+    async session({ session, token }) {
+      session.user.id = token.id as string;
+      session.user.role = token.role as Role;
+      return session;
     },
   },
 });
 
-const roleMap = new Map<string, number>([
-  // ['admin', 1],
-  ['organizer', 2],
-  ['speaker', 3],
-  ['attendee', 4],
-]);
-
-function roleToRoleId(role: string): number {
-  const roleId = roleMap.get(role.toLowerCase());
-  if (!roleId) {
-    throw new Error(`Invalid role: ${role}`);
-  }
-  return roleId;
-}

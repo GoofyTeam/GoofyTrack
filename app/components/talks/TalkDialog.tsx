@@ -29,10 +29,9 @@ interface TalkDialogProps {
   setIsOpen: (isOpen: boolean) => void;
   talk: Talk | null;
   isNew: boolean;
-  onSave: (talk: Omit<Talk, 'id'> & { id?: string }) => void;
 }
 
-export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: TalkDialogProps) {
+export default function TalkDialog({ isOpen, setIsOpen, talk, isNew }: TalkDialogProps) {
   const [currentTalk, setCurrentTalk] = useState<Omit<Talk, 'id'> & { id?: string }>(emptyTalk);
 
   useEffect(() => {
@@ -48,9 +47,34 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
     });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    onSave(currentTalk);
+  
+    try {
+      const response = await fetch('/api/talks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: currentTalk.title,
+          description: currentTalk.description,
+          speakerId: 1, // or pass an id directly",
+          subjectId: topics.indexOf(currentTalk.topic) + 1, // or pass an id directly
+          durationMinutes: currentTalk.durationMinutes,
+          level: currentTalk.level,
+        }),
+      });
+  
+      if (!response.ok) {
+        // TODO: surface message in UI
+        throw new Error(`Erreur ${response.status}`);
+      }
+  
+      // Success – close dialog & refresh list if needed
+      setIsOpen(false);
+      // e.g. mutate SWR cache or call `router.refresh()`
+    } catch (err) {
+      console.error('Impossible d’enregistrer le talk :', err);
+    }
   };
 
   return (

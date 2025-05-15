@@ -87,10 +87,10 @@ GoofyTrack est une application de gestion d'événements techniques permettant l
 
 ## 🧑‍💻 Workflow de développement
 
-### Git Flow
-- Branches principales : `main`, `develop`
-- Branches de fonctionnalités : `feature/nom-fonctionnalité`
-- Branches de correction : `hotfix/nom-correction`
+[//]: # (### Git Flow)
+[//]: # (- Branches principales : `main`, `develop`)
+[//]: # (- Branches de fonctionnalités : `feature/nom-fonctionnalité`)
+[//]: # (- Branches de correction : `hotfix/nom-correction`)s
 
 ### Commits
 Utilisation de commits conventionnels :
@@ -106,7 +106,8 @@ Utilisation de commits conventionnels :
 Le projet utilise GitHub Actions pour l'automatisation :
 - Lint du code à chaque PR
 - Exécution des tests
-- Vérification de la couverture de code
+
+[//]: # (- Vérification de la couverture de code)
 - Build de l'application
 
 ### Déploiement
