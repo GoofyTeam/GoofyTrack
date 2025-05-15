@@ -1,10 +1,11 @@
 import Header from '@/components/header';
+import PendingTalksList from '@/components/talks/PendingTalksList';
 import TalksList from '@/components/talks/TalksList';
 import TalksSchedule from '@/components/talks/TalksSchedule';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockData } from '@/lib/mock-data';
 import { ScheduledTalk, Talk } from '@/lib/types';
-import { isAttendee } from '@/utils/auth.utils';
+import { isOrganizer } from '@/utils/auth.utils';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
@@ -67,17 +68,27 @@ export default function TalksPage() {
       <Header />
 
       <Tabs defaultValue="talks">
-        {session.status !== 'authenticated' ||
-          (!isAttendee(session.data?.user?.roleId) && (
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="talks">Liste des Talks</TabsTrigger>
-              <TabsTrigger value="schedule">Planification</TabsTrigger>
-            </TabsList>
-          ))}
+        {isOrganizer(session.data?.user?.roleId) && (
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="talks">Tous les talks</TabsTrigger>
+            <TabsTrigger value="pending">Tous les talks en attente</TabsTrigger>
+            <TabsTrigger value="schedule">Planification</TabsTrigger>
+          </TabsList>
+        )}
 
         {/* Tab: Liste des talks */}
         <TabsContent value="talks">
           <TalksList
+            talks={talks}
+            onAddTalk={addTalk}
+            onDeleteTalk={deleteTalk}
+            onUpdateTalk={updateTalk}
+          />
+        </TabsContent>
+
+        {/* Tab: Liste des talks */}
+        <TabsContent value="pending">
+          <PendingTalksList
             talks={talks}
             onAddTalk={addTalk}
             onChangeTalkStatus={changeTalkStatus}
