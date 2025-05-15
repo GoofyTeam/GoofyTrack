@@ -10,7 +10,7 @@ export default function Header() {
 
   return (
     <div className="mb-6 flex items-center justify-between">
-      <h1 className="text-2xl font-bold">Gestion des Talks</h1>
+      <h1 className="text-2xl font-bold">Goofy Talk</h1>
       <div className="flex gap-2">
         {status === 'unauthenticated' ? (
           <Button
