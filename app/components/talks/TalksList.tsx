@@ -13,7 +13,7 @@ import {
 import { levels } from '@/lib/mock-data';
 import { Talk } from '@/lib/types';
 import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2, CalendarPlus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import DeleteDialog from './DeleteDialog';
@@ -25,6 +25,28 @@ interface TalksListProps {
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
   onUpdateTalk: (talk: Talk) => void;
   onDeleteTalk: (talkId: string) => void;
+}
+
+// Helper to generate Google Calendar event link
+function getGoogleCalendarUrl(talk: Talk) {
+  // For demo, use current date/time as start, and add duration
+  const start = new Date();
+  const end = new Date(start.getTime() + (talk.durationMinutes || 30) * 60000);
+
+  function formatDate(d: Date) {
+    // YYYYMMDDTHHmmssZ
+    return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  }
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: talk.title,
+    details: talk.description || '',
+    location: 'Goofy Talk',
+    dates: `${formatDate(start)}/${formatDate(end)}`,
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 export default function TalksList({
@@ -137,6 +159,13 @@ export default function TalksList({
                         </>
                       )}
                   </div>
+                  {talk.status === 'accepted' && (
+                    <a href={getGoogleCalendarUrl(talk)} rel="noopener noreferrer" target="_blank">
+                      <Button size="sm" variant="outline">
+                        <CalendarPlus className="mr-1 h-4 w-4" /> Ajouter à Google Calendar
+                      </Button>
+                    </a>
+                  )}
                 </CardFooter>
               </Card>
             ))}
