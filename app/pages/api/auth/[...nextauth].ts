@@ -2,13 +2,14 @@ import { prisma } from '@/lib/prisma';
 import { roleToRoleId } from '@/utils/auth.utils';
 import bcrypt from 'bcrypt';
 import NextAuth, { User } from 'next-auth';
+import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      role: Role; // ← now an enum value
+      roleId: number;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -17,10 +18,10 @@ declare module 'next-auth' {
 }
 
 interface ExtendedUser extends User {
-  role: Role;
+  roleId: number;
 }
 
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
@@ -30,21 +31,24 @@ export default NextAuth({
         password: { label: 'Password', type: 'password' },
         isRegister: { label: 'Register', type: 'boolean' },
         name: { label: 'Name', type: 'text' },
-        role: { label: 'Role', type: 'text' }, // expect one of Role enum keys
+        role: { label: 'Role', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.error('Missing email or password');
           throw new Error('Missing email or password');
         }
 
         const { email, password, name, role, isRegister } = credentials;
 
-        if (isRegister === 'true') {
-          // ─── Registration ───────────────────────────────────────────────
-          const exists = await prisma.users.findUnique({ where: { email } });
-          if (exists) {
-            throw new Error('User already exists');
-          }
+        try {
+          if (isRegister === 'true') {
+            // Handle registration
+            const existingUser = await prisma.user.findUnique({ where: { email } });
+            if (existingUser) {
+              console.error('User already exists');
+              throw new Error('User already exists');
+            }
 
             const hashedPassword = await bcrypt.hash(password, 12);
             const roleId = roleToRoleId(role);
@@ -74,39 +78,42 @@ export default NextAuth({
               throw new Error('Invalid email or password');
             }
 
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) {
-          throw new Error('Invalid email or password');
-        }
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+              console.error('Invalid password');
+              throw new Error('Invalid email or password');
+            }
 
-        return {
-         
+            return {
               id: user.id.toString(),
-         
               name: user.username,
-         
               email: user.email,
               roleId: user.role_id,
-           ,
-          role: user.role,
-        };
+            };
+          }
+        } catch (error) {
+          console.error('Error in authorize function:', error);
+          throw new Error('Internal server error');
+        }
       },
     }),
   ],
-
   callbacks: {
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.roleId = token.roleId as number;
+      }
+      return session;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as ExtendedUser).role;
+        token.roleId = (user as ExtendedUser).roleId;
       }
       return token;
     },
-
-    async session({ session, token }) {
-      session.user.id = token.id as string;
-      session.user.role = token.role as Role;
-      return session;
-    },
   },
-});
+};
+
+export default NextAuth(authOptions);

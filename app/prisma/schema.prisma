@@ -32,7 +32,7 @@ model favorites {
   talk_id    Int
   created_at DateTime @default(now()) @db.Timestamp
   talks      talks    @relation(fields: [talk_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorites_talk_id_fk")
-  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorites_user_id_fk")
+  users      User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorites_user_id_fk")
 
   @@unique([user_id, talk_id], map: "favorites_user_id_talk_id_unique")
   @@index([talk_id], map: "favorites_talk_id_idx")
@@ -46,7 +46,7 @@ model feedback {
   comment    String?  @db.Text
   created_at DateTime @default(now()) @db.Timestamp
   talks      talks    @relation(fields: [talk_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feedback_talk_id_fk")
-  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feedback_user_id_fk")
+  users      User     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "feedback_user_id_fk")
 
   @@unique([user_id, talk_id], map: "feedback_user_id_talk_id_unique")
   @@index([talk_id], map: "feedback_talk_id_idx")
@@ -105,33 +105,12 @@ model talks {
   favorites   favorites[]
   feedback    feedback[]
   schedules   schedules?
-  users       users        @relation(fields: [speaker_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "talks_speaker_id_fk")
+  users       User         @relation(fields: [speaker_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "talks_speaker_id_fk")
   subjects    subjects     @relation(fields: [subject_id], references: [id], onUpdate: Restrict, map: "talks_subject_id_fk")
 
   @@index([speaker_id], map: "speaker_id")
   @@index([status], map: "status")
   @@index([subject_id], map: "subject_id")
-}
-
-model users {
-  id         Int         @id @default(autoincrement())
-  username   String      @db.VarChar(50)
-  email      String      @unique(map: "email") @db.VarChar(100)
-  password   String      @db.VarChar(255)
-  role       Role        @default(USER)
-  avatar_url String?     @db.VarChar(255)
-  bio        String?     @db.Text
-  created_at DateTime    @default(now()) @db.Timestamp(0)
-  updated_at DateTime    @default(now()) @db.Timestamp(0)
-  favorites  favorites[]
-  feedback   feedback[]
-  talks      talks[]
-}
-
-enum Role {
-  USER
-  SPEAKER
-  ADMIN
 }
 
 enum talks_level {

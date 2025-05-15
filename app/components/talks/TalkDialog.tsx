@@ -52,9 +52,31 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
     });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  // const handleSubmit = (e: FormEvent) => {
+  //   e.preventDefault();
+  //   onSave(currentTalk);
+  // };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    onSave(currentTalk);
+  
+    try {
+      const response = await fetch('/api/talks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:   JSON.stringify(currentTalk),
+      });
+  
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+  
+      const savedTalk = await response.json();         // ← now includes its DB id
+      onSave(savedTalk);                               // bubble up to <TalksList/>
+      setIsOpen(false);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
