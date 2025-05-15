@@ -25,14 +25,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(deletedTalk);
   } catch (err) {
     // Validation error — the `id` param was missing or invalid
-    if (err instanceof z.ZodError)
-      return res.status(400).json({ error: 'Invalid `id` parameter' });
+    if (err instanceof z.ZodError) return res.status(400).json({ error: 'Invalid `id` parameter' });
 
     // Record not found — translate Prisma error code P2025 into a 404
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === 'P2025'
-    )
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025')
       return res.status(404).json({ error: 'Talk not found' });
 
     // Any other unexpected error

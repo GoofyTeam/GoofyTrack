@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   /* ---------- 2. validate body ---------- */
   const parse = payloadSchema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: parse.error.errors });
-  const data = parse.data;
+  const { data } = parse;
 
   try {
     /* ---------- 3. fetch role name ---------- */
@@ -38,9 +38,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const roleName = user.roles.name;            // e.g. "attendee" | "speaker" | "admin"
-    const talkStatus =
-      roleName === 'attendee' ? 'pending' : 'accepted';
+    const roleName = user.roles.name; // e.g. "attendee" | "speaker" | "admin"
+    const talkStatus = roleName === 'attendee' ? 'pending' : 'accepted';
 
     /* ---------- 4. create talk ---------- */
     const talk = await prisma.talks.create({

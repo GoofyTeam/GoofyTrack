@@ -59,20 +59,20 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-  
+
     try {
       const response = await fetch('/api/talks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:   JSON.stringify(currentTalk),
+        body: JSON.stringify(currentTalk),
       });
-  
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
-  
-      const savedTalk = await response.json();         // ← now includes its DB id
-      onSave(savedTalk);                               // bubble up to <TalksList/>
+
+      const savedTalk = await response.json(); // ← now includes its DB id
+      onSave(savedTalk); // bubble up to <TalksList/>
       setIsOpen(false);
     } catch (error) {
       console.error(error);
