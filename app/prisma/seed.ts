@@ -7,6 +7,9 @@ async function main() {
 
   // Seed pour les sujets
   await seedSubjects();
+
+  // Seed pour les salles
+  await seedRooms();
 }
 
 async function seedRoles() {
@@ -52,6 +55,47 @@ async function seedSubjects() {
     console.log('Sujets de base créés avec succès');
   } else {
     console.log('Les sujets existent déjà, aucune action nécessaire');
+  }
+}
+
+async function seedRooms() {
+  // Vérifier si les salles existent déjà
+  const roomsCount = await prisma.rooms.count();
+
+  if (roomsCount === 0) {
+    // Créer les 5 salles comme indiqué dans l'énoncé du projet
+    await prisma.rooms.createMany({
+      data: [
+        {
+          name: 'Salle Amphithéâtre',
+          capacity: 300,
+          description: 'Grande salle principale pour les keynotes et sessions populaires',
+        },
+        {
+          name: 'Salle Ateliers',
+          capacity: 100,
+          description: 'Salle équipée pour les ateliers pratiques et hands-on labs',
+        },
+        {
+          name: 'Salle Conférences A',
+          capacity: 150,
+          description: 'Salle de conférence standard pour les présentations techniques',
+        },
+        {
+          name: 'Salle Conférences B',
+          capacity: 150,
+          description: 'Salle de conférence standard pour les présentations techniques',
+        },
+        {
+          name: 'Salle Innovation',
+          capacity: 80,
+          description: 'Espace dédié aux démonstrations et nouvelles technologies',
+        },
+      ],
+    });
+    console.log('Les 5 salles ont été créées avec succès');
+  } else {
+    console.log('Les salles existent déjà, aucune action nécessaire');
   }
 }
 
