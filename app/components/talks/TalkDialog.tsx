@@ -1,7 +1,7 @@
 // components/talks/TalkDialog.tsx
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -21,9 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { topics, levels, durations, emptyTalk } from '@/lib/mock-data';
+import { Textarea } from '@/components/ui/textarea';
+import { durations, emptyTalk, levels, topics } from '@/lib/mock-data';
 import { Talk, TalkLevel } from '@/lib/types';
 import { useSession } from 'next-auth/react';
+import { FormEvent, useEffect, useState } from 'react';
 
 interface TalkDialogProps {
   isOpen: boolean;
