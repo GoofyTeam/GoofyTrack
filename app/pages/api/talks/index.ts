@@ -10,6 +10,7 @@ const payloadSchema = z.object({
   description: z.string().min(1),
   durationMinutes: z.coerce.number().int().positive(),
   level: z.enum(['beginner', 'intermediate', 'advanced', 'expert']),
+  topic: z.string().min(1),
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -42,12 +43,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const talkStatus = roleName === 'attendee' ? 'pending' : 'accepted';
 
     /* ---------- 4. create talk ---------- */
+    // Find the subject by name (assuming 'topic' is the subject name)
+    const subject = await prisma.subjects.findUnique({
+      where: { name: data.topic },
+      select: { id: true },
+    });
+    if (!subject) return res.status(400).json({ error: 'Subject not found' });
+
     const talk = await prisma.talks.create({
       data: {
         title: data.title,
         description: data.description,
         speaker_id: user.id,
-        subject_id: data.subjectId,
+        subject_id: subject.id,
         duration: data.durationMinutes,
         level: data.level,
         status: talkStatus,
