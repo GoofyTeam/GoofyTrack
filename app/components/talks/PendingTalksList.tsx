@@ -1,4 +1,4 @@
-// components/talks/PendingTalksList.tsx - Modified version
+// components/talks/PendingTalksList.tsx
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -22,11 +22,33 @@ import StatusDialog from './StatusDialog';
 import TalkDialog from './TalkDialog';
 
 // Mock data for rooms (you should replace this with your actual data)
-const rooms = [
-  { id: 'room1', name: 'Salle A', capacity: 100 },
-  { id: 'room2', name: 'Salle B', capacity: 50 },
-  { id: 'room3', name: 'Salle C', capacity: 200 },
-];
+// const rooms = [
+//   {
+//     name: 'Salle Amphithéâtre',
+//     capacity: 300,
+//     description: 'Grande salle principale pour les keynotes et sessions populaires',
+//   },
+//   {
+//     name: 'Salle Ateliers',
+//     capacity: 100,
+//     description: 'Salle équipée pour les ateliers pratiques et hands-on labs',
+//   },
+//   {
+//     name: 'Salle Conférences A',
+//     capacity: 150,
+//     description: 'Salle de conférence standard pour les présentations techniques',
+//   },
+//   {
+//     name: 'Salle Conférences B',
+//     capacity: 150,
+//     description: 'Salle de conférence standard pour les présentations techniques',
+//   },
+//   {
+//     name: 'Salle Innovation',
+//     capacity: 80,
+//     description: 'Espace dédié aux démonstrations et nouvelles technologies',
+//   },
+// ];
 
 interface PendingTalksListProps {
   talks: Talk[];
@@ -192,7 +214,6 @@ export default function PendingTalksList({
       {/* Dialog for status change */}
       <StatusDialog
         isOpen={isStatusDialogOpen}
-        rooms={rooms}
         setIsOpen={setIsStatusDialogOpen}
         talk={talkToChangeStatus}
         onChangeTalkStatus={onChangeTalkStatus}

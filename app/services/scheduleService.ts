@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { isOrganizer } from '@/utils/auth.utils';
+import { Prisma } from '@prisma/client';
 import { NextApiRequest } from 'next';
 import { getSession } from 'next-auth/react';
 
@@ -44,26 +45,12 @@ export async function checkRoomAvailability(
   if (!room) {
     throw new Error('Salle non trouvée');
   }
-
-  const conflictCondition = {
+  const conflictCondition: Prisma.schedulesWhereInput = {
     room_id: roomId,
     OR: [
-      {
-        start_time: {
-          gte: startTime,
-          lt: endTime,
-        },
-      },
-      {
-        end_time: {
-          gt: startTime,
-          lte: endTime,
-        },
-      },
-      {
-        // Englobe un autre talk
-        AND: [{ start_time: { lte: startTime } }, { end_time: { gte: endTime } }],
-      },
+      { start_time: { gte: startTime, lt: endTime } },
+      { end_time: { gt: startTime, lte: endTime } },
+      { AND: [{ start_time: { lte: startTime } }, { end_time: { gte: endTime } }] },
     ],
   };
 

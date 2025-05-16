@@ -1,4 +1,3 @@
-// components/talks/TalkDialog.tsx
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -20,62 +19,82 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { durations, emptyTalk, levels, topics } from '@/lib/mock-data';
+import { durations, emptyTalk, levels } from '@/lib/mock-data';
 import { Talk, TalkLevel } from '@/lib/types';
 import { useSession } from 'next-auth/react';
 import { FormEvent, useEffect, useState } from 'react';
 
+// form subjects (must match your DB subjects.name)
+export const subjects = [
+  'JavaScript',
+  'TypeScript',
+  'React',
+  'Next.js',
+  'Node.js',
+  'Prisma',
+  'GraphQL',
+  'DevOps',
+  'Architecture',
+  'UX/UI',
+  'Mobile',
+  'Security',
+  'Testing',
+  'Performance',
+  'Accessibility',
+];
+
 interface TalkDialogProps {
   isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  setIsOpen: (open: boolean) => void;
   talk: Talk | null;
   isNew: boolean;
-  onSave: (talk: Omit<Talk, 'id'> & { id?: string }) => void;
+  onSave: (talk: Talk) => void;
 }
 
 export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: TalkDialogProps) {
-  const session = useSession();
-  const [currentTalk, setCurrentTalk] = useState<Omit<Talk, 'id'> & { id?: string }>(emptyTalk);
+  const { data: session } = useSession();
+  const [currentTalk, setCurrentTalk] = useState<Omit<Talk, 'id'>>(emptyTalk);
 
   useEffect(() => {
-    if (isOpen) {
-      if (!session.data?.user.id) throw new Error('User ID is required');
+    if (!isOpen) return;
+    if (!session?.user?.id) throw new Error('User ID is required');
+    setCurrentTalk(isNew ? { ...emptyTalk, speakerId: session.user.id } : { ...(talk as Talk) });
+  }, [isOpen, isNew, talk, session]);
 
-      setCurrentTalk(isNew ? { ...emptyTalk, speakerId: session.data.user.id } : { ...talk! });
-    }
-  }, [isOpen, isNew, talk]);
-
-  const handleInputChange = (field: keyof Talk, value: string | number | TalkLevel) => {
-    setCurrentTalk({
-      ...currentTalk,
-      [field]: value,
-    });
+  const handleInputChange = (field: keyof Omit<Talk, 'id'>, value: string | number | TalkLevel) => {
+    setCurrentTalk({ ...currentTalk, [field]: value });
   };
-
-  // const handleSubmit = (e: FormEvent) => {
-  //   e.preventDefault();
-  //   onSave(currentTalk);
-  // };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    const payload = {
+      title: currentTalk.title,
+      description: currentTalk.description,
+      topic: currentTalk.topic,
+      durationMinutes: currentTalk.durationMinutes,
+      level: currentTalk.level,
+    };
+
+    // Choose POST for new, PUT for existing
+    const url = isNew ? '/api/talks' : `/api/talks/${talk?.id}`;
+    const method = isNew ? 'POST' : 'PUT';
+
     try {
-      const response = await fetch('/api/talks', {
-        method: 'POST',
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentTalk),
+        body: JSON.stringify(payload),
       });
-
       if (!response.ok) {
-        throw new Error(await response.text());
+        const err = await response.json();
+        throw new Error(err.error || 'Unknown error');
       }
-
-      const savedTalk = await response.json(); // ← now includes its DB id
-      onSave(savedTalk); // bubble up to <TalksList/>
+      const saved = await response.json();
+      onSave(saved);
       setIsOpen(false);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error('Failed to save talk:', err);
     }
   };
 
@@ -105,19 +124,19 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="topic">Sujet</Label>
+              <Label htmlFor="subject">Sujet</Label>
               <Select
                 value={currentTalk.topic}
                 required
-                onValueChange={(value) => handleInputChange('topic', value)}
+                onValueChange={(v) => handleInputChange('topic', v)}
               >
-                <SelectTrigger id="topic">
+                <SelectTrigger id="subject">
                   <SelectValue placeholder="Sélectionner un sujet" />
                 </SelectTrigger>
                 <SelectContent>
-                  {topics.map((topic) => (
-                    <SelectItem key={topic} value={topic}>
-                      {topic}
+                  {subjects.map((subj) => (
+                    <SelectItem key={subj} value={subj}>
+                      {subj}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -129,15 +148,15 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
               <Select
                 value={currentTalk.level}
                 required
-                onValueChange={(value) => handleInputChange('level', value as TalkLevel)}
+                onValueChange={(v) => handleInputChange('level', v as TalkLevel)}
               >
                 <SelectTrigger id="level">
                   <SelectValue placeholder="Sélectionner un niveau" />
                 </SelectTrigger>
                 <SelectContent>
-                  {levels.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      {level.label}
+                  {levels.map((lvl) => (
+                    <SelectItem key={lvl.value} value={lvl.value}>
+                      {lvl.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -147,17 +166,19 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
             <div className="space-y-2">
               <Label htmlFor="duration">Durée</Label>
               <Select
-                value={currentTalk.durationMinutes.toString()}
+                value={
+                  currentTalk.durationMinutes != null ? currentTalk.durationMinutes.toString() : ''
+                }
                 required
-                onValueChange={(value) => handleInputChange('durationMinutes', parseInt(value))}
+                onValueChange={(v) => handleInputChange('durationMinutes', parseInt(v, 10))}
               >
                 <SelectTrigger id="duration">
                   <SelectValue placeholder="Sélectionner une durée" />
                 </SelectTrigger>
                 <SelectContent>
-                  {durations.map((duration) => (
-                    <SelectItem key={duration.value} value={duration.value.toString()}>
-                      {duration.label}
+                  {durations.map((d) => (
+                    <SelectItem key={d.value} value={String(d.value)}>
+                      {d.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,36 +1,46 @@
-import { toggleFavorite } from '@/services/favoriteService';
+// pages/api/talks/[id]/favorite.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth/next';
+import { prisma } from '@/lib/prisma';
+import { authOptions } from '../../auth/[...nextauth]';
+import { Prisma } from '@prisma/client';
 
-/**
- * API pour toggle un talk en favoris
- * POST: Ajouter/retirer un talk des favoris
- */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getSession({ req });
-  if (!session?.user) {
-    return res.status(401).json({ error: 'Authentification requise' });
+  const talkId = parseInt(req.query.id as string, 10);
+  if (!talkId || (req.method !== 'POST' && req.method !== 'DELETE')) {
+    res.setHeader('Allow', ['POST', 'DELETE']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Méthode non autorisée' });
-  }
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) return res.status(401).json({ error: 'Unauthorized' });
+
+  const userId = parseInt(session.user.id, 10);
+  // optional: check role is attendee
+  // if (!isAttendee(session.user.roleId)) return res.status(403).json({ error: 'Forbidden' })
 
   try {
-    // Récupérer l'ID du talk depuis l'URL
-    const { id } = req.query;
-
-    if (!id || Array.isArray(id)) {
-      return res.status(400).json({ error: 'ID de talk invalide' });
+    if (req.method === 'POST') {
+      // Create favorite (unique constraint guards duplicates)
+      const fav = await prisma.favorites.create({
+        data: { user_id: userId, talk_id: talkId },
+      });
+      return res.status(201).json(fav);
+    } else {
+      // DELETE: remove the favorite
+      await prisma.favorites.deleteMany({
+        where: { user_id: userId, talk_id: talkId },
+      });
+      return res.status(204).end();
     }
-
-    const talkId = parseInt(id);
-
-    // Appeler le service pour toggle le favoris
-    const result = await toggleFavorite(talkId, req);
-
-    return res.status(200).json(result);
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Une erreur est survenue' });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      // Unique constraint violation on POST
+      if (err.code === 'P2002') {
+        return res.status(409).json({ error: 'Already favorited' });
+      }
+    }
+    console.error(err);
+    return res.status(500).json({ error: 'Server error' });
   }
 }

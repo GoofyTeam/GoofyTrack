@@ -29,7 +29,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
       icon: <Check className="mr-1 h-3 w-3" />,
       label: 'Accepté',
     },
-    refused: {
+    rejected: {
       variant: 'outline',
       className: 'bg-red-100',
       icon: <X className="mr-1 h-3 w-3" />,

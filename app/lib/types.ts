@@ -1,7 +1,9 @@
 // lib/types.ts
 
+import { RoomWithSlots } from '@/components/talks/TalksSchedule';
+
 // Définition des types pour l'application
-export type TalkStatus = 'pending' | 'accepted' | 'refused' | 'scheduled';
+export type TalkStatus = 'pending' | 'accepted' | 'rejected' | 'scheduled';
 export type TalkLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export interface Talk {
@@ -33,7 +35,7 @@ export interface Slot {
 export interface ScheduledTalk {
   talk: Talk;
   slot: Slot;
-  room: Room;
+  room: RoomWithSlots;
 }
 
 // Types pour les options de formulaires

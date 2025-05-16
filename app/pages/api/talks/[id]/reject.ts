@@ -39,7 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rejectResult = await rejectTalk(talkId, req);
 
     return res.status(200).json(rejectResult);
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Une erreur est survenue' });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
+    return res.status(500).json({ error: errorMessage });
   }
 }

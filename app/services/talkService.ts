@@ -225,21 +225,21 @@ export async function updateTalk(talkId: number, data: UpdateTalkData, req: Next
   // Utiliser une transaction pour mettre à jour le talk et gérer les schedules
   return prisma.$transaction(async (tx) => {
     // 1. Mettre à jour le talk
-    const updatedTalk = await tx.talks.update({
-      where: { id: talkId },
-      data: updateData,
-      include: {
-        users: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-        subjects: true,
-      },
-    });
+    // const updatedTalk = await tx.talks.update({
+    //   where: { id: talkId },
+    //   data: updateData,
+    //   include: {
+    //     users: {
+    //       select: {
+    //         id: true,
+    //         username: true,
+    //         email: true,
+    //         avatarUrl: true,
+    //       },
+    //     },
+    //     subjects: true,
+    //   },
+    // });
 
     // 2. Gérer les schedules
     if (schedulesToCreate.length > 0) {

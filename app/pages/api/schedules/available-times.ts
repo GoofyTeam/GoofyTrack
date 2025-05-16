@@ -31,7 +31,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     return res.status(200).json(availableTimes);
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Une erreur est survenue' });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Une erreur inconnue est survenue' });
   }
 }

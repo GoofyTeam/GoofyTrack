@@ -59,7 +59,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const result = await validateTalk(talkId, roomId, new Date(startTime), new Date(endTime), req);
 
     return res.status(200).json(result);
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Une erreur est survenue' });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
+    return res.status(500).json({ error: errorMessage });
   }
 }
