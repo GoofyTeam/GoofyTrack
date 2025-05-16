@@ -20,7 +20,6 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isOrganizer } from '@/utils/auth.utils';
 import type { Talk } from '@/lib/types';
-import PlanningOverview from './PlanningOverview';
 import PlanningTable from './PlanningOverview';
 
 //

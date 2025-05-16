@@ -78,33 +78,40 @@ const PlanningTable: React.FC = () => {
   };
 
   return (
-    <div className="p-4 overflow-auto">
+    <div className="overflow-auto p-4">
       <div className="mb-4">
-        <label htmlFor="schedule-date" className="mr-2 font-medium">Date:</label>
+        <label className="mr-2 font-medium" htmlFor="schedule-date">
+          Date:
+        </label>
         <input
+          className="rounded border px-2 py-1"
           id="schedule-date"
           type="date"
           value={date.toISOString().slice(0, 10)}
           onChange={handleDateChange}
-          className="border rounded px-2 py-1"
         />
       </div>
 
-      <table className="border min-w-full divide-y divide-gray-200 table-fixed">
+      <table className="min-w-full table-fixed divide-y divide-gray-200 border">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Salle</th>
+            <th className="px-6 py-3 text-left text-xs font-medium tracking-wider uppercase">
+              Salle
+            </th>
             {timeSlots.map((slot) => (
-              <th key={slot.label} className="px-4 py-2 text-xs font-medium uppercase tracking-wider">
+              <th
+                key={slot.label}
+                className="px-4 py-2 text-xs font-medium tracking-wider uppercase"
+              >
                 {slot.label}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="divide-y divide-gray-200 bg-white">
           {rooms.map((room) => (
             <tr key={room.id}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{room.name}</td>
+              <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">{room.name}</td>
               {timeSlots.map((slot) => {
                 const match = scheduledSlots.find((s) => {
                   const slotStart = new Date(s.start_time);
@@ -117,7 +124,10 @@ const PlanningTable: React.FC = () => {
                   );
                 });
                 return (
-                  <td key={`${room.id}-${slot.label}`} className="px-4 py-2 whitespace-nowrap text-sm">
+                  <td
+                    key={`${room.id}-${slot.label}`}
+                    className="px-4 py-2 text-sm whitespace-nowrap"
+                  >
                     {match ? match.talk_id : '-'}
                   </td>
                 );
