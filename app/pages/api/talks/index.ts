@@ -1,87 +1,125 @@
 // pages/api/talks/index.ts
+import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { prisma } from '@/lib/prisma';
-import type { Prisma } from '@prisma/client';
+// import le schéma de validation, à remplacer par votre schema réel
+import { z } from 'zod';
+
+// Définir un schéma de validation pour les talks
+const createTalkSchema = z.object({
+  title: z.string().min(3),
+  description: z.string().min(10),
+  topic: z.string(),
+  durationMinutes: z.number().int().positive(),
+  level: z.string(),
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 1) For GET, decide which talks to show based on role
+  // 1. Traitement de la méthode GET
   if (req.method === 'GET') {
-    // try to get a session (if any)
-    const session = await getServerSession(req, res, authOptions);
+    try {
+      let filter: Prisma.talksWhereInput = { status: 'accepted' };
+      const session = await getServerSession(req, res, authOptions);
 
-    // now strongly typed
-    let filter: Prisma.talksWhereInput = { status: 'accepted' };
+      if (session) {
+        const userId = parseInt(session.user.id, 10);
+        const user = await prisma.users.findUnique({
+          where: { id: userId },
+          include: { roles: true },
+        });
 
-    if (session) {
-      const userId = parseInt(session.user.id, 10);
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: { roles: true },
+        // Si l'utilisateur est un organisateur, montrer tous les talks
+        if (user?.roles.name === 'organizer') {
+          filter = {};
+        }
+      }
+
+      // Récupérer tous les talks avec leurs relations
+      const talks = await prisma.talks.findMany({
+        where: filter,
+        include: {
+          subjects: true,
+          schedules: true,
+          users: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          id: 'desc',
+        },
       });
 
-      // if the user is an organizer, show everything
-      if (user?.roles.name === 'organizer') {
-        filter = {}; // {} is a valid TalksWhereInput
-      }
+      return res.status(200).json(talks);
+    } catch (err) {
+      console.error('[GET /api/talks]', err);
+      return res.status(500).json({ error: 'Internal server error' });
     }
-
-    const talks = await prisma.talks.findMany({
-      where: filter,
-      include: {
-        subjects: true,
-        schedules: true,
-        feedback: true,
-        favorites: true,
-        users: { select: { id: true, username: true, email: true } },
-      },
-      orderBy: { created_at: 'desc' },
-    });
-
-    return res.status(200).json({ talks });
   }
 
-  // 2) For other methods (POST, etc), we still require auth
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) return res.status(401).json({ error: 'Unauthorized' });
+  // 2. Vérification de l'authentification pour les autres méthodes
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
 
-  // 3) Load user
+  // 3. Authentification pour POST
+  const session = await getServerSession(req, res, authOptions);
+  if (!session?.user) return res.status(401).json({ error: 'Unauthenticated' });
+
+  // 4. Récupération de l'utilisateur et vérification du rôle
   const userId = parseInt(session.user.id, 10);
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     include: { roles: true },
   });
+
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  // 4) Branch POST (only speakers/orgs)
-  if (req.method === 'POST') {
-    const role = user.roles.name;
-    if (role !== 'speaker' && role !== 'organizer')
-      return res.status(403).json({ error: 'Forbidden' });
+  const role = user.roles.name;
+  if (role !== 'speaker' && role !== 'organizer') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
 
-    const { title, description, topic, durationMinutes, level } = req.body;
-    if (!title || !description || !topic || !durationMinutes || !level)
-      return res.status(400).json({ error: 'Missing fields' });
+  // 5. Validation du corps de la requête pour POST
+  try {
+    const { title, description, subject_id, duration, level } = req.body;
 
-    const subject = await prisma.subjects.findUnique({ where: { name: topic } });
-    if (!subject) return res.status(400).json({ error: `Subject "${topic}" not found` });
+    if (!title || !description || !subject_id || !duration || !level) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
 
+    // Vérifier que le sujet existe
+    const subject = await prisma.subjects.findUnique({
+      where: { id: parseInt(subject_id) },
+    });
+
+    if (!subject) {
+      return res.status(400).json({ error: `Subject with ID ${subject_id} not found` });
+    }
+
+    // 6. Création du talk
     const newTalk = await prisma.talks.create({
       data: {
         title,
         description,
         speaker_id: user.id,
-        subject_id: subject.id,
-        duration: durationMinutes,
-        level,
-        status: role === 'organizer' ? 'accepted' : 'pending',
+        subject_id: parseInt(subject_id),
+        duration: parseInt(duration),
+        level: level.toUpperCase(),
+        status: role === 'organizer' ? 'ACCEPTED' : 'PENDING',
       },
     });
-    return res.status(201).json(newTalk);
-  }
 
-  // 5) All other methods — 405
-  res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(201).json(newTalk);
+  } catch (err) {
+    console.error('[POST /api/talks]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }

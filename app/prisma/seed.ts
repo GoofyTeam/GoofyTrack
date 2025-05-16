@@ -111,8 +111,6 @@ async function seedRooms() {
 }
 
 async function seedUsers() {
-  // Note: nous allons toujours créer nos utilisateurs de test
-  // même s'il y en a déjà (ils seront identifiés par leur email)
   const roles = await prisma.roles.findMany();
   const roleMap = new Map(roles.map((role) => [role.name, role.id]));
 
@@ -120,87 +118,104 @@ async function seedUsers() {
   const saltRounds = 10;
   const defaultPassword = await bcrypt.hash('password123', saltRounds);
 
-  // Créer les utilisateurs
-  await prisma.user.createMany({
-    data: [
-      // Admin
-      {
-        username: 'admin',
-        email: 'admin@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('admin') || 1,
-        bio: 'Administrateur principal de la plateforme',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
-      },
-      // Organisateurs
-      {
-        username: 'organizer1',
-        email: 'organizer1@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('organizer') || 2,
-        bio: 'Responsable de la planification des talks',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=organizer1',
-      },
-      {
-        username: 'organizer2',
-        email: 'organizer2@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('organizer') || 2,
-        bio: 'Chargé de la sélection des talks',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=organizer2',
-      },
-      // Conférenciers
-      {
-        username: 'speaker1',
-        email: 'speaker1@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('speaker') || 3,
-        bio: 'Expert JavaScript et React',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=speaker1',
-      },
-      {
-        username: 'speaker2',
-        email: 'speaker2@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('speaker') || 3,
-        bio: 'Systèmes distribués et architecture microservices',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=speaker2',
-      },
-      {
-        username: 'speaker3',
-        email: 'speaker3@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('speaker') || 3,
-        bio: 'Design UX/UI et accessibilité',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=speaker3',
-      },
-      // Participants
-      {
-        username: 'attendee1',
-        email: 'attendee1@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('attendee') || 4,
-        bio: 'Développeur front-end passionné',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=attendee1',
-      },
-      {
-        username: 'attendee2',
-        email: 'attendee2@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('attendee') || 4,
-        bio: 'DevOps enthusiast',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=attendee2',
-      },
-      {
-        username: 'attendee3',
-        email: 'attendee3@goofy.com',
-        password: defaultPassword,
-        role_id: roleMap.get('attendee') || 4,
-        bio: 'Data scientist',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=attendee3',
-      },
-    ],
-  });
+  // Définir les données des utilisateurs
+  const userData = [
+    // Admin
+    {
+      username: 'admin',
+      email: 'admin@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('admin') || 1,
+      bio: 'Administrateur principal de la plateforme',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+    },
+    // Organisateurs
+    {
+      username: 'organizer1',
+      email: 'organizer1@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('organizer') || 2,
+      bio: 'Responsable de la planification des talks',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=organizer1',
+    },
+    {
+      username: 'organizer2',
+      email: 'organizer2@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('organizer') || 2,
+      bio: 'Chargé de la sélection des talks',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=organizer2',
+    },
+    // Conférenciers
+    {
+      username: 'speaker1',
+      email: 'speaker1@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('speaker') || 3,
+      bio: 'Expert JavaScript et React',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=speaker1',
+    },
+    {
+      username: 'speaker2',
+      email: 'speaker2@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('speaker') || 3,
+      bio: 'Systèmes distribués et architecture microservices',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=speaker2',
+    },
+    {
+      username: 'speaker3',
+      email: 'speaker3@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('speaker') || 3,
+      bio: 'Design UX/UI et accessibilité',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=speaker3',
+    },
+    // Participants
+    {
+      username: 'attendee1',
+      email: 'attendee1@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('attendee') || 4,
+      bio: 'Développeur front-end passionné',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=attendee1',
+    },
+    {
+      username: 'attendee2',
+      email: 'attendee2@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('attendee') || 4,
+      bio: 'DevOps enthusiast',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=attendee2',
+    },
+    {
+      username: 'attendee3',
+      email: 'attendee3@goofy.com',
+      password: defaultPassword,
+      role_id: roleMap.get('attendee') || 4,
+      bio: 'Data scientist',
+      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=attendee3',
+    },
+  ];
+
+  // Créer chaque utilisateur individuellement si son email n'existe pas déjà
+  let usersCreated = 0;
+  for (const user of userData) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: user.email },
+    });
+
+    if (!existingUser) {
+      await prisma.user.create({ data: user });
+      usersCreated++;
+    }
+  }
+
+  if (usersCreated > 0) {
+    console.log(`${usersCreated} nouveaux utilisateurs créés`);
+  } else {
+    console.log('Aucun nouvel utilisateur créé, ils existent tous déjà');
+  }
 
   console.log(
     'Utilisateurs de test créés ou mis à jour avec succès. Mot de passe par défaut: password123',

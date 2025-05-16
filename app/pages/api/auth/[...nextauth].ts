@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { roleToRoleId } from '@/utils/auth.utils';
 import bcrypt from 'bcrypt';
-import NextAuth, { User } from 'next-auth';
-import { NextAuthOptions } from 'next-auth';
+import NextAuth, { NextAuthOptions, User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 declare module 'next-auth' {

@@ -1,152 +1,331 @@
-import { useEffect, useState } from 'react';
 import Header from '@/components/header';
 import PendingTalksList from '@/components/talks/PendingTalksList';
 import TalksList from '@/components/talks/TalksList';
 import TalksSchedule from '@/components/talks/TalksSchedule';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Talk, TalkStatus } from '@/lib/types';
-import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
+import { Room, ScheduledTalk, Slot, Talk } from '@/lib/types';
+import { isOrganizer } from '@/utils/auth.utils';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { useSession } from 'next-auth/react';
-import { mockData } from '@/lib/mock-data';
-import MyTalksList from '@/components/talks/MyTalksList';
+import { useEffect, useState } from 'react';
 
 export default function TalksPage() {
-  const { data: session, status } = useSession();
+  const session = useSession();
+  const queryClient = useQueryClient();
+
+  // Utiliser React Query pour les appels API
+  const {
+    data: talksData,
+    isLoading: talksLoading,
+    error: talksError,
+  } = useQuery({
+    queryKey: ['talks'],
+    queryFn: () => axios.get('/api/talks').then((res) => res.data),
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // 30 secondes
+  });
+
+  const {
+    data: roomsData,
+    isLoading: roomsLoading,
+    error: roomsError,
+  } = useQuery({
+    queryKey: ['rooms'],
+    queryFn: () => axios.get('/api/references/rooms').then((res) => res.data),
+    refetchOnWindowFocus: false,
+    staleTime: 60000, // 1 minute
+  });
+
+  const {
+    data: slotsData,
+    isLoading: slotsLoading,
+    error: slotsError,
+  } = useQuery({
+    queryKey: ['slots'],
+    queryFn: () => axios.get('/api/schedules/available-times').then((res) => res.data),
+    refetchOnWindowFocus: false,
+    staleTime: 30000,
+  });
+
+  const {
+    data: schedulesData,
+    isLoading: schedulesLoading,
+    error: schedulesError,
+  } = useQuery({
+    queryKey: ['schedules'],
+    queryFn: () => axios.get('/api/schedules').then((res) => res.data),
+    refetchOnWindowFocus: false,
+    staleTime: 30000,
+  });
+
+  // États locaux pour la gestion des données
   const [talks, setTalks] = useState<Talk[]>([]);
-  // const [scheduledTalks, setScheduledTalks] = useState<ScheduledTalk[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [scheduledTalks, setScheduledTalks] = useState<ScheduledTalk[]>([]);
+
+  // Mettre à jour les états locaux quand les données sont chargées
+  useEffect(() => {
+    if (talksData) {
+      const formattedTalks: Talk[] = talksData.map((talk: any) => ({
+        id: talk.id.toString(),
+        title: talk.title,
+        topic: talk.subjects.name,
+        description: talk.description,
+        durationMinutes: talk.duration,
+        level: talk.level.toLowerCase(),
+        status: talk.status.toLowerCase(),
+        speakerId: talk.speaker_id.toString(),
+      }));
+      setTalks(formattedTalks);
+    }
+  }, [talksData]);
 
   useEffect(() => {
-    // wait until Next-Auth has resolved
-    if (status === 'loading') return;
+    if (roomsData) {
+      const formattedRooms: Room[] = roomsData.map((room: any) => ({
+        id: room.id.toString(),
+        name: room.name,
+        capacity: room.capacity,
+      }));
+      setRooms(formattedRooms);
+    }
+  }, [roomsData]);
 
-    const fetchTalks = async () => {
-      setLoading(true);
-      setError(null);
+  useEffect(() => {
+    if (slotsData) {
+      const formattedSlots: Slot[] = slotsData.map((slot: any) => ({
+        id: slot.id.toString(),
+        date: new Date(slot.date),
+        startTime: slot.start_time,
+        endTime: slot.end_time,
+        roomId: slot.room_id.toString(),
+        talkId: slot.talk_id ? slot.talk_id.toString() : null,
+      }));
+      setSlots(formattedSlots);
+    }
+  }, [slotsData]);
 
-      // choose endpoint: authenticated speakers -> /api/talks/me; everything else -> public /api/talks
-      let endpoint = '/api/talks';
-      if (status === 'authenticated') {
-        if (isSpeaker(session!.user.roleId)) {
-          endpoint = '/api/talks/me';
-        }
-      }
+  useEffect(() => {
+    if (schedulesData && talks.length > 0 && rooms.length > 0) {
+      const formatted: ScheduledTalk[] = schedulesData
+        .map((schedule: any) => {
+          const talk = talks.find((t) => t.id === schedule.talk_id.toString());
+          const room = rooms.find((r) => r.id === schedule.room_id.toString());
 
-      try {
-        const res = await fetch(endpoint);
-        if (!res.ok) throw new Error(`Error: ${res.status}`);
-        const { talks: fetched } = await res.json();
-        setTalks(fetched);
-        // console.log('session:', session);
-        // console.log('fetched talks:', fetched);
-      } catch (err) {
-        if (err instanceof Error) {
-          console.error(err);
-          setError(err.message);
-        } else {
-          console.error('Unexpected error:', err);
-          setError('An unexpected error occurred');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+          if (!talk || !room) return null;
 
-    fetchTalks();
-  }, [status, session?.user.roleId]);
+          const slot: Slot = {
+            id: schedule.id.toString(),
+            date: new Date(schedule.start_time),
+            startTime: new Date(schedule.start_time).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            endTime: new Date(schedule.end_time).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            roomId: schedule.room_id.toString(),
+            talkId: schedule.talk_id.toString(),
+          };
 
-  // Fonction pour programmer un talk
-  const scheduleTalk = (talkId: string, slotId: string) => {
-    const talk = talks.find((t) => t.id === talkId);
-    const slot = mockData.slots.find((s) => s.id === slotId);
+          return { talk, room, slot };
+        })
+        .filter(Boolean) as ScheduledTalk[];
 
-    if (!talk || !slot) return;
+      setScheduledTalks(formatted);
+    }
+  }, [schedulesData, talks, rooms]);
 
-    const updatedTalk = { ...talk, status: 'scheduled' as const };
-    const updatedSlot = { ...slot, talkId: talk.id };
+  // Gérer les états de chargement et d'erreur
+  const isLoading = talksLoading || roomsLoading || slotsLoading || schedulesLoading;
+  const isError = talksError || roomsError || slotsError || schedulesError;
 
-    setTalks((prev) => prev.map((t) => (t.id === talk.id ? updatedTalk : t)));
-    // setScheduledTalks((prev) => [
-    //   ...prev,
-    //   {
-    //     talk: updatedTalk,
-    //     slot: updatedSlot,
-    //     room: mockData.rooms.find((r) => r.id === slot.roomId)!,
-    //   },
-    // ]);
+  // Mutation pour programmer un talk
+  const scheduleMutation = useMutation({
+    mutationFn: async ({ talkId, slotId }: { talkId: string; slotId: string }) => {
+      // Trouver le talk et le slot sélectionnés
+      const talk = talks.find((t) => t.id === talkId);
+      const slot = slots.find((s) => s.id === slotId);
 
-    return { updatedTalk, updatedSlot };
+      if (!talk || !slot) throw new Error('Talk ou slot non trouvé');
+
+      // Appeler l'API pour programmer le talk
+      const scheduleData = {
+        talk_id: parseInt(talkId),
+        room_id: parseInt(slot.roomId),
+        start_time: slot.startTime,
+        end_time: slot.endTime,
+        date: slot.date,
+      };
+
+      // L'API schedules met déjà à jour le statut du talk à 'scheduled'
+      const response = await axios.post(`/api/schedules`, scheduleData);
+      return response.data;
+    },
+    onSuccess: () => {
+      // Rafraîchir les données après une modification réussie
+      queryClient.invalidateQueries({ queryKey: ['talks'] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['slots'] });
+    },
+    onError: (error) => {
+      console.error('Erreur lors de la programmation du talk:', error);
+    },
+  });
+
+  const scheduleTalk = async (talkId: string, slotId: string) => {
+    try {
+      await scheduleMutation.mutateAsync({ talkId, slotId });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error };
+    }
   };
 
-  // Fonctions pour gérer les talks
-  const addTalk = (newTalk: Omit<Talk, 'id'>) => {
-    const talkWithId = {
-      ...newTalk,
-      id: Date.now().toString(),
-    } as Talk;
-    setTalks((prev) => [...prev, talkWithId]);
+  // Mutation pour ajouter un talk
+  const addTalkMutation = useMutation({
+    mutationFn: async (newTalk: Omit<Talk, 'id'>) => {
+      const talkData = {
+        title: newTalk.title,
+        description: newTalk.description,
+        subject_id: parseInt(newTalk.topic), // L'API attend un ID numérique
+        duration: newTalk.durationMinutes,
+        level: newTalk.level.toUpperCase(),
+      };
+
+      const response = await axios.post('/api/talks', talkData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['talks'] });
+    },
+    onError: (error) => {
+      console.error("Erreur lors de l'ajout du talk:", error);
+    },
+  });
+
+  const addTalk = async (newTalk: Omit<Talk, 'id'>) => {
+    try {
+      await addTalkMutation.mutateAsync(newTalk);
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du talk:", error);
+    }
   };
 
-  const updateTalk = (updatedTalk: Talk) => {
-    setTalks((prev) => prev.map((t) => (t.id === updatedTalk.id ? updatedTalk : t)));
+  // Mutation pour mettre à jour un talk
+  const updateTalkMutation = useMutation({
+    mutationFn: async (updatedTalk: Talk) => {
+      const talkData = {
+        title: updatedTalk.title,
+        description: updatedTalk.description,
+        subject_id: parseInt(updatedTalk.topic), // L'API attend un ID numérique
+        duration: updatedTalk.durationMinutes,
+        level: updatedTalk.level.toUpperCase(),
+        status: updatedTalk.status,
+      };
+
+      const response = await axios.put(`/api/talks/${updatedTalk.id}`, talkData);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['talks'] });
+    },
+    onError: (error) => {
+      console.error('Erreur lors de la mise à jour du talk:', error);
+    },
+  });
+
+  const updateTalk = async (updatedTalk: Talk) => {
+    try {
+      await updateTalkMutation.mutateAsync(updatedTalk);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du talk:', error);
+    }
   };
+
+  // Mutation pour supprimer un talk
+  const deleteTalkMutation = useMutation({
+    mutationFn: async (talkId: string) => {
+      const response = await axios.delete(`/api/talks/${talkId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['talks'] });
+    },
+    onError: (error) => {
+      console.error('Erreur lors de la suppression du talk:', error);
+    },
+  });
 
   const deleteTalk = async (talkId: string) => {
-    const res = await fetch(`/api/talks/${talkId}`, { method: 'DELETE' });
-    if (res.ok) {
-      setTalks((prev) => prev.filter((t) => t.id !== talkId));
-    } else {
-      const err = await res.json();
-      console.error('Failed to delete talk:', err.error);
-      // optionally show a toast/snackbar here
+    try {
+      await deleteTalkMutation.mutateAsync(talkId);
+    } catch (error) {
+      console.error('Erreur lors de la suppression du talk:', error);
     }
   };
-  // const changeTalkStatus = (talkId: string, newStatus: Talk['status']) => {
-  //   setTalks((prev) => prev.map((t) => (t.id === talkId ? { ...t, status: newStatus } : t)));
-  // };
 
-  async function changeTalkStatus(talkId: string, newStatus: TalkStatus) {
-    const res = await fetch(`/api/talks/${talkId}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    if (!res.ok) {
-      const error = await res.json();
-      console.error('Failed to change talk status:', error.error);
+  // Mutation pour changer le statut d'un talk
+  const changeTalkStatusMutation = useMutation({
+    mutationFn: async ({ talkId, newStatus }: { talkId: string; newStatus: Talk['status'] }) => {
+      // Utiliser l'API appropriée selon le statut
+      let response;
+      if (newStatus === 'accepted') {
+        response = await axios.put(`/api/talks/${talkId}/accept`);
+      } else if (newStatus === 'refused') {
+        response = await axios.put(`/api/talks/${talkId}/reject`);
+      } else {
+        response = await axios.put(`/api/talks/${talkId}`, { status: newStatus });
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['talks'] });
+    },
+    onError: (error) => {
+      console.error('Erreur lors du changement de statut du talk:', error);
+    },
+  });
+
+  const changeTalkStatus = async (talkId: string, newStatus: Talk['status']) => {
+    try {
+      await changeTalkStatusMutation.mutateAsync({ talkId, newStatus });
+    } catch (error) {
+      console.error('Erreur lors du changement de statut du talk:', error);
     }
-  }
-
-  if (loading) {
-    return <div>Loading talks...</div>;
-  }
-  if (error) {
-    return <div>Error loading talks: {error}</div>;
-  }
+  };
 
   return (
     <div className="container mx-auto space-y-8 p-4">
       <Header />
 
       <Tabs defaultValue="talks">
-        {isOrganizer(session?.user?.roleId) && (
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="talks">Tous les talks</TabsTrigger>
-            <TabsTrigger value="pending">Tous les talks en attente</TabsTrigger>
-            <TabsTrigger value="schedule">Planification</TabsTrigger>
-          </TabsList>
-        )}
+        {/* Navigation différente selon le rôle */}
+        <TabsList
+          className={`grid w-full grid-cols-${isOrganizer(session.data?.user?.roleId) ? '3' : '1'}`}
+        >
+          <TabsTrigger value="talks">Tous les talks</TabsTrigger>
+          {isOrganizer(session.data?.user?.roleId) && (
+            <>
+              <TabsTrigger value="pending">Tous les talks en attente</TabsTrigger>
+              <TabsTrigger value="schedule">Planification</TabsTrigger>
+            </>
+          )}
+        </TabsList>
 
         {/* Tab: Liste des talks */}
         <TabsContent value="talks">
-          {isSpeaker(session?.user?.roleId) ? (
-            <MyTalksList
-              talks={talks}
-              onAddTalk={addTalk}
-              onDeleteTalk={deleteTalk}
-              onUpdateTalk={updateTalk}
-            />
+          {isLoading ? (
+            <div className="flex h-40 items-center justify-center">
+              <p>Chargement des données...</p>
+            </div>
+          ) : isError ? (
+            <div className="flex h-40 items-center justify-center">
+              <p className="text-red-500">Erreur lors du chargement des données</p>
+            </div>
           ) : (
             <TalksList
               talks={talks}
@@ -157,26 +336,47 @@ export default function TalksPage() {
           )}
         </TabsContent>
 
-        {/* Tab: Liste des talks en attente */}
+        {/* Tab: Liste des talks */}
         <TabsContent value="pending">
-          <PendingTalksList
-            talks={talks}
-            onAddTalk={addTalk}
-            onChangeTalkStatus={changeTalkStatus}
-            onDeleteTalk={deleteTalk}
-            onUpdateTalk={updateTalk}
-          />
+          {isLoading ? (
+            <div className="flex h-40 items-center justify-center">
+              <p>Chargement des données...</p>
+            </div>
+          ) : isError ? (
+            <div className="flex h-40 items-center justify-center">
+              <p className="text-red-500">Erreur lors du chargement des données</p>
+            </div>
+          ) : (
+            <PendingTalksList
+              isLoading={changeTalkStatusMutation.isLoading}
+              talks={talks.filter((talk) => talk.status === 'pending')}
+              onAddTalk={addTalk}
+              onChangeTalkStatus={changeTalkStatus}
+              onDeleteTalk={deleteTalk}
+              onUpdateTalk={updateTalk}
+            />
+          )}
         </TabsContent>
 
         {/* Tab: Planification */}
         <TabsContent value="schedule">
-          <TalksSchedule
-            // rooms={mockData.rooms}
-            // scheduledTalks={scheduledTalks}
-            // slots={mockData.slots}
-            talks={talks.filter((talk) => talk.status === 'accepted')}
-            onScheduleTalk={scheduleTalk}
-          />
+          {isLoading ? (
+            <div className="flex h-40 items-center justify-center">
+              <p>Chargement des données...</p>
+            </div>
+          ) : isError ? (
+            <div className="flex h-40 items-center justify-center">
+              <p className="text-red-500">Erreur lors du chargement des données</p>
+            </div>
+          ) : (
+            <TalksSchedule
+              rooms={rooms}
+              scheduledTalks={scheduledTalks}
+              slots={slots}
+              talks={talks.filter((talk) => talk.status === 'accepted')}
+              onScheduleTalk={scheduleTalk}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
