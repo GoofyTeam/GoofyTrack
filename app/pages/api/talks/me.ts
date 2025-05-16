@@ -20,16 +20,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // 3. Fetch all talks where the current user is the speaker
-    const talks = await prisma.talks.findMany({
+    const speakerTalks = await prisma.talks.findMany({
       where: { speaker_id: userId },
       include: {
-        subjects: true, // if you want the topic name
-        schedules: true, // if you want any scheduled slots
-        feedback: true, // feedback for each talk
-        favorites: true, // who favorited it
+        subjects: true,
+        schedules: true,
+        feedback: true,
+        favorites: true,
+        users: { select: { id: true, username: true, email: true } },
       },
       orderBy: { created_at: 'desc' },
     });
+
+    // 4. Fetch all other talks (exclude talks where the user is the speaker)
+    const otherTalks = await prisma.talks.findMany({
+      where: { speaker_id: { not: userId } },
+      include: {
+        subjects: true,
+        schedules: true,
+        feedback: true,
+        favorites: true,
+        users: { select: { id: true, username: true, email: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    // 5. Combine speakerTalks and otherTalks (no duplicates)
+    const talks = [...speakerTalks, ...otherTalks];
 
     return res.status(200).json({ talks });
   } catch (error) {
