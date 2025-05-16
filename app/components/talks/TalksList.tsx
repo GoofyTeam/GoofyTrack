@@ -16,6 +16,7 @@ import { useState, useMemo } from 'react';
 import DeleteDialog from './DeleteDialog';
 import StatusBadge from './StatusBadge';
 import TalkDialog from './TalkDialog';
+import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
 
 interface TalksListProps {
   talks: Talk[];
@@ -134,9 +135,12 @@ export default function TalksList({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Tous mes talks</h2>
-        <Button onClick={handleCreateTalk}>
-          <Plus className="mr-2 h-4 w-4" /> Nouveau Talk
-        </Button>
+        {isOrganizer(session.data?.user.roleId) ||
+          (isSpeaker(session.data?.user.roleId) && (
+            <Button onClick={handleCreateTalk}>
+              <Plus className="mr-2 h-4 w-4" /> Nouveau Talk
+            </Button>
+          ))}
       </div>
 
       <div className="mb-2 flex flex-wrap gap-4">
