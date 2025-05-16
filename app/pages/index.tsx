@@ -178,7 +178,7 @@ export default function TalksPage() {
               onDeleteTalk={deleteTalk}
               onUpdateTalk={updateTalk}
             />
-            <div className='py-8'/>
+            <div className="py-8" />
             <TalksSchedule
               // rooms={mockData.rooms}
               // scheduledTalks={scheduledTalks}

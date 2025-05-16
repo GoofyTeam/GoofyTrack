@@ -12,8 +12,7 @@ import {
 } from '@/components/ui/card';
 import { levels } from '@/lib/mock-data';
 import { Talk, Room } from '@/lib/types';
-import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
-import { Pencil, Plus, Trash2, CalendarPlus } from 'lucide-react';
+import { Pencil, Trash2, CalendarPlus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useMemo } from 'react';
 import DeleteDialog from './DeleteDialog';
@@ -143,7 +142,6 @@ export default function AcceptedTalksList({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Talks acceptés</h2>
-
       </div>
 
       <div className="mb-2 flex flex-wrap gap-4">
