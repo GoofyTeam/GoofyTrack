@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma';
 import { isOrganizer } from '@/utils/auth.utils';
-import { Prisma } from '@prisma/client';
 import { NextApiRequest } from 'next';
 import { getSession } from 'next-auth/react';
 
@@ -45,18 +44,45 @@ export async function checkRoomAvailability(
   if (!room) {
     throw new Error('Salle non trouvée');
   }
-  const conflictCondition: Prisma.schedulesWhereInput = {
+
+  // Définir le type pour permettre l'ajout dynamique de propriétés
+  type ConflictCondition = {
+    room_id: number;
+    talk_id?: { not: number };
+    OR: Array<
+      | { start_time: { gte: Date; lt: Date } }
+      | { end_time: { gt: Date; lte: Date } }
+      | { AND: Array<{ start_time: { lte: Date } } | { end_time: { gte: Date } }> }
+    >;
+  };
+
+  const conflictCondition: ConflictCondition = {
     room_id: roomId,
     OR: [
-      { start_time: { gte: startTime, lt: endTime } },
-      { end_time: { gt: startTime, lte: endTime } },
-      { AND: [{ start_time: { lte: startTime } }, { end_time: { gte: endTime } }] },
+      {
+        // Commence pendant un autre talk
+        start_time: {
+          gte: startTime,
+          lt: endTime,
+        },
+      },
+      {
+        // Finit pendant un autre talk
+        end_time: {
+          gt: startTime,
+          lte: endTime,
+        },
+      },
+      {
+        // Englobe un autre talk
+        AND: [{ start_time: { lte: startTime } }, { end_time: { gte: endTime } }],
+      },
     ],
   };
 
   // Si on exclut un talk (pour les mises à jour), ajouter cette condition
   if (excludeTalkId) {
-    conflictCondition['talk_id'] = { not: excludeTalkId };
+    conflictCondition.talk_id = { not: excludeTalkId };
   }
 
   const existingSchedules = await prisma.schedules.findMany({
@@ -168,7 +194,6 @@ export async function getAvailableRoomsForTimeSlot(startTime: Date, endTime: Dat
     throw new Error("L'heure de début doit être antérieure à l'heure de fin");
   }
 
-  // Récupérer toutes les salles
   const allRooms = await prisma.rooms.findMany();
 
   // Récupérer les salles qui ont déjà un schedule dans cette plage horaire

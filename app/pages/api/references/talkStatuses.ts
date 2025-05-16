@@ -1,5 +1,6 @@
-import { NextApiRequest, NextApiResponse } from 'next';
 import { getTalkStatuses } from '@/services/referenceDataService';
+import { asApiError } from '@/types/error';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 /**
  * API pour récupérer tous les statuts de talks disponibles
@@ -13,8 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const statuses = await getTalkStatuses();
     return res.status(200).json(statuses);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
-    return res.status(500).json({ error: errorMessage });
+  } catch (error: unknown) {
+    const apiError = asApiError(error);
+    return res
+      .status(apiError.status || 500)
+      .json({ error: apiError.message || 'Une erreur est survenue' });
   }
 }

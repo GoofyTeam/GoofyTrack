@@ -1,4 +1,5 @@
-// pages/api/talks/[id]/favorite.ts
+import { toggleFavorite } from '@/services/favoriteService';
+import { asApiError } from '@/types/error';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { prisma } from '@/lib/prisma';
@@ -33,14 +34,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       return res.status(204).end();
     }
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      // Unique constraint violation on POST
-      if (err.code === 'P2002') {
-        return res.status(409).json({ error: 'Already favorited' });
-      }
-    }
-    console.error(err);
-    return res.status(500).json({ error: 'Server error' });
+
+    const talkId = parseInt(id);
+
+    // Appeler le service pour toggle le favoris
+    const result = await toggleFavorite(talkId, req);
+
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    const apiError = asApiError(error);
+    return res
+      .status(apiError.status || 500)
+      .json({ error: apiError.message || 'Une erreur est survenue' });
   }
 }
