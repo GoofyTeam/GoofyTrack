@@ -33,7 +33,7 @@ export default function ScheduledTalksList({ scheduledTalks }: ScheduledTalksLis
                     Horaire: {scheduledTalk.slot.startTime} - {scheduledTalk.slot.endTime}
                   </p>
                   <p>Salle: {scheduledTalk.room.name}</p>
-                  <p>Durée: {scheduledTalk.talk.durationMinutes} min</p>
+                  <p>Durée: {scheduledTalk.talk.duration} min</p>
                   <p>Niveau: {scheduledTalk.talk.level}</p>
                 </div>
               </div>
