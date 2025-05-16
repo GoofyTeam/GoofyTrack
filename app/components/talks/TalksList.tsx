@@ -68,12 +68,14 @@ export default function TalksList({
   const filteredScheduledTalks = useMemo(() => {
     return talks.filter((talk) => {
       let ok = true;
+
+      if (talk.status !== 'scheduled' && talk.speaker_id.toString() !== session.data?.user.id)
+        ok = false;
       if (filterTopic && talk.subjects?.name !== filterTopic) ok = false;
       if (filterDuration && String(talk.duration) !== filterDuration) ok = false;
       if (filterLevel && talk.level !== filterLevel) ok = false;
       return ok;
     });
-    // }, [scheduledTalks, filterTopic, filterDuration, filterLevel, filterRoom, filterDate]);
   }, [talks, filterTopic, filterDuration, filterLevel, filterRoom]);
 
   const handleCreateTalk = () => {
