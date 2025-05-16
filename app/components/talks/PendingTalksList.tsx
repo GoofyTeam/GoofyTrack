@@ -78,17 +78,20 @@ export default function PendingTalksList({
 
   const confirmDeleteTalk = () => {
     if (talkToDelete) {
-      onDeleteTalk(talkToDelete.id);
+      onDeleteTalk(talkToDelete.id.toString());
       setIsDeleteDialogOpen(false);
       setTalkToDelete(null);
     }
   };
 
-  const saveTalk = (talk: Omit<Talk, 'id'> & { id?: string }) => {
+  const saveTalk = (talk: Talk) => {
     if (isNewTalk) {
-      onAddTalk(talk);
+      // Remove id for onAddTalk, as it expects Omit<Talk, 'id'>
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, ...talkWithoutId } = talk;
+      onAddTalk(talkWithoutId);
     } else {
-      onUpdateTalk(talk as Talk);
+      onUpdateTalk(talk);
     }
     setIsDialogOpen(false);
   };
@@ -121,11 +124,11 @@ export default function PendingTalksList({
                     <StatusBadge status={talk.status} />
                   </div>
                   <CardDescription className="text-muted-foreground flex space-x-2 text-sm">
-                    <span>{talk.topic}</span>
+                    <span>{talk.subjects?.name}</span>
                     <span>•</span>
                     <span>{levels.find((l) => l.value === talk.level)?.label}</span>
                     <span>•</span>
-                    <span>{talk.durationMinutes} min</span>
+                    <span>{talk.duration} min</span>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
@@ -134,7 +137,7 @@ export default function PendingTalksList({
                 <CardFooter className="flex justify-between pt-2">
                   <div className="flex space-x-2">
                     {session.status === 'authenticated' &&
-                      session.data?.user.id === talk.speakerId && (
+                      String(session.data?.user.id) === String(talk.speakerId) && (
                         <>
                           <Button size="sm" variant="outline" onClick={() => handleEditTalk(talk)}>
                             <Pencil className="mr-1 h-4 w-4" /> Modifier
