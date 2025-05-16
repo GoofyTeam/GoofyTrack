@@ -223,7 +223,7 @@ export default function TalksList({
               if (session.data?.user.id === talk.speakerId) {
                 return true;
               }
-              return talk.status === 'accepted';
+              return talk.status === 'scheduled';
             })
             // .map(({ talk }) => (
             .map((talk) => (
@@ -262,7 +262,7 @@ export default function TalksList({
                         </>
                       )}
                   </div>
-                  {talk.status === 'accepted' && (
+                  {talk.status === 'scheduled' && (
                     <a href={getGoogleCalendarUrl(talk)} rel="noopener noreferrer" target="_blank">
                       <Button size="sm" variant="outline">
                         <CalendarPlus className="mr-1 h-4 w-4" /> Ajouter à Google Calendar

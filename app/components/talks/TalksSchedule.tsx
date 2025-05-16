@@ -20,7 +20,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isOrganizer } from '@/utils/auth.utils';
 import type { Talk } from '@/lib/types';
-import PlanningOverview from './PlanningOverview';
+import PlanningTable from './PlanningOverview';
 
 //
 // Define the shape coming back from /api/rooms/availability
@@ -288,10 +288,7 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
           </CardContent>
         </Card>
       </div>
-      <PlanningOverview
-        rooms={rooms.map(({ roomId, name }) => ({ roomId, name }))}
-        date={selectedDate}
-      />
+      <PlanningTable />
     </div>
   );
 }
