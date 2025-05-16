@@ -1,91 +1,83 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Room, ScheduledTalk } from '@/lib/types';
+'use client';
+
+import { useEffect, useState } from 'react';
+import type { Talk } from '@/lib/types';
+
+interface Room {
+  roomId: number;
+  name: string;
+}
+
+interface ScheduledSlot {
+  id: number;
+  roomId: number;
+  startTime: string;
+  endTime: string;
+  talk: Talk;
+}
 
 interface PlanningOverviewProps {
   rooms: Room[];
-  scheduledTalks: ScheduledTalk[];
+  date: Date;
 }
 
-export default function PlanningOverview({ rooms, scheduledTalks }: PlanningOverviewProps) {
-  const timeSlots = ['9:00', '10:15', '11:30', '13:30', '14:45', '16:00'];
+export default function PlanningOverview({ rooms, date }: PlanningOverviewProps) {
+  const [scheduledSlots, setScheduledSlots] = useState<ScheduledSlot[]>([]);
+  const hours = Array.from({ length: 9 }, (_, i) => 9 + i); // 09–10 … 17–18
+
+  useEffect(() => {
+    const dateParam = date.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    fetch(`/api/schedules?date=${dateParam}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Impossible de charger le planning');
+        return res.json();
+      })
+      .then((data: { schedules: ScheduledSlot[] }) => {
+        // console.log('schedules from API:', data.schedules);
+        setScheduledSlots(data.schedules);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert(err.message);
+      });
+  }, [date]);
 
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>Vue d'ensemble du planning</CardTitle>
-        <CardDescription>
-          Visualisez tous les talks programmés par jour et par salle
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="border p-2">Salle / Heure</th>
-                {timeSlots.map((time, index) => {
-                  let endTime;
-                  switch (index) {
-                    case 0:
-                      endTime = '10:00';
-                      break;
-                    case 1:
-                      endTime = '11:15';
-                      break;
-                    case 2:
-                      endTime = '12:30';
-                      break;
-                    case 3:
-                      endTime = '14:30';
-                      break;
-                    case 4:
-                      endTime = '15:45';
-                      break;
-                    default:
-                      endTime = '17:00';
-                  }
-                  return (
-                    <th key={index} className="border p-2">
-                      {time} - {endTime}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {rooms.map((room) => (
-                <tr key={room.id}>
-                  <td className="border p-2 font-medium">{room.name}</td>
-                  {timeSlots.map((time, index) => {
-                    // Trouver un talk programmé pour cette salle à ce créneau
-                    const startTime = index === 0 ? '09:00' : time;
-                    const scheduledTalk = scheduledTalks.find(
-                      (st) => st.room.id === room.id && st.slot.startTime === startTime,
-                    );
-
-                    return (
-                      <td key={index} className="border p-2">
-                        {scheduledTalk ? (
-                          <div className="rounded bg-blue-50 p-1 text-xs">
-                            <div className="font-medium">{scheduledTalk.talk.title}</div>
-                            <div className="text-muted-foreground">
-                              {scheduledTalk.talk.durationMinutes} min
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-muted-foreground text-center text-xs">
-                            Disponible
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="mt-6 overflow-auto">
+      <table className="w-full table-fixed border-collapse">
+        <thead>
+          <tr>
+            <th className="border bg-gray-100 p-2">Salle / Heure</th>
+            {hours.map((h) => (
+              <th key={h} className="border bg-gray-100 p-2 text-center">
+                {`${h}:00–${h + 1}:00`}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rooms.map((room) => (
+            <tr key={room.roomId}>
+              <td className="border p-2 font-medium">{room.name}</td>
+              {hours.map((h) => {
+                const slot = scheduledSlots.find(
+                  (s) => s.roomId === room.roomId && new Date(s.startTime).getHours() === h,
+                );
+                return (
+                  <td key={h} className="h-16 border p-1 align-top">
+                    {slot ? (
+                      <div className="rounded bg-blue-50 p-1 text-sm">
+                        <strong className="block truncate">{slot.talk.title}</strong>
+                        <span className="text-xs">Speaker #{slot.talk.speakerId}</span>
+                      </div>
+                    ) : null}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

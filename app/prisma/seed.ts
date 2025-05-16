@@ -21,9 +21,9 @@ async function seedRoles() {
     await prisma.roles.createMany({
       data: [{ name: 'admin' }, { name: 'organizer' }, { name: 'speaker' }, { name: 'attendee' }],
     });
-    console.log('Rôles de base créés avec succès');
+    // console.log('Rôles de base créés avec succès');
   } else {
-    console.log('Les rôles existent déjà, aucune action nécessaire');
+    // console.log('Les rôles existent déjà, aucune action nécessaire');
   }
 }
 
@@ -52,9 +52,9 @@ async function seedSubjects() {
         { name: 'Accessibility' },
       ],
     });
-    console.log('Sujets de base créés avec succès');
+    // console.log('Sujets de base créés avec succès');
   } else {
-    console.log('Les sujets existent déjà, aucune action nécessaire');
+    // console.log('Les sujets existent déjà, aucune action nécessaire');
   }
 }
 
@@ -93,9 +93,9 @@ async function seedRooms() {
         },
       ],
     });
-    console.log('Les 5 salles ont été créées avec succès');
+    // console.log('Les 5 salles ont été créées avec succès');
   } else {
-    console.log('Les salles existent déjà, aucune action nécessaire');
+    // console.log('Les salles existent déjà, aucune action nécessaire');
   }
 }
 

@@ -1,4 +1,4 @@
-// components/talks/TalksList.tsx
+// components/talks/PendingTalksList.tsx
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -10,28 +10,60 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { levels } from '@/lib/mock-data';
 import { Talk, TalkStatus } from '@/lib/types';
 import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 import DeleteDialog from './DeleteDialog';
 import StatusBadge from './StatusBadge';
+import StatusDialog from './StatusDialog';
 import TalkDialog from './TalkDialog';
+
+// Mock data for rooms (you should replace this with your actual data)
+// const rooms = [
+//   {
+//     name: 'Salle Amphithéâtre',
+//     capacity: 300,
+//     description: 'Grande salle principale pour les keynotes et sessions populaires',
+//   },
+//   {
+//     name: 'Salle Ateliers',
+//     capacity: 100,
+//     description: 'Salle équipée pour les ateliers pratiques et hands-on labs',
+//   },
+//   {
+//     name: 'Salle Conférences A',
+//     capacity: 150,
+//     description: 'Salle de conférence standard pour les présentations techniques',
+//   },
+//   {
+//     name: 'Salle Conférences B',
+//     capacity: 150,
+//     description: 'Salle de conférence standard pour les présentations techniques',
+//   },
+//   {
+//     name: 'Salle Innovation',
+//     capacity: 80,
+//     description: 'Espace dédié aux démonstrations et nouvelles technologies',
+//   },
+// ];
 
 interface PendingTalksListProps {
   talks: Talk[];
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
   onUpdateTalk: (talk: Talk) => void;
   onDeleteTalk: (talkId: string) => void;
-  onChangeTalkStatus: (talkId: string, newStatus: TalkStatus) => void;
+  onChangeTalkStatus: (
+    talkId: string,
+    newStatus: TalkStatus,
+    details?: {
+      startDate?: Date;
+      endDate?: Date;
+      roomId?: string;
+    },
+  ) => void;
 }
 
 export default function PendingTalksList({
@@ -45,8 +77,10 @@ export default function PendingTalksList({
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [currentTalk, setCurrentTalk] = useState<Talk | null>(null);
   const [talkToDelete, setTalkToDelete] = useState<Talk | null>(null);
+  const [talkToChangeStatus, setTalkToChangeStatus] = useState<Talk | null>(null);
   const [isNewTalk, setIsNewTalk] = useState(true);
 
   const handleCreateTalk = () => {
@@ -64,6 +98,11 @@ export default function PendingTalksList({
   const handleDeleteTalk = (talk: Talk) => {
     setTalkToDelete(talk);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleChangeStatus = (talk: Talk) => {
+    setTalkToChangeStatus(talk);
+    setIsStatusDialogOpen(true);
   };
 
   const confirmDeleteTalk = () => {
@@ -140,21 +179,15 @@ export default function PendingTalksList({
                       )}
                   </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline">
-                        Changer le statut
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => onChangeTalkStatus(talk.id, 'accepted')}>
-                        <Check className="mr-2 h-4 w-4" /> Accepter
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onChangeTalkStatus(talk.id, 'refused')}>
-                        <X className="mr-2 h-4 w-4" /> Refuser
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {/* Bouton pour ouvrir la modale de changement de statut - sans condition */}
+                  <Button
+                    className="bg-blue-600 text-white hover:bg-blue-700"
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleChangeStatus(talk)}
+                  >
+                    Changer le statut
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
@@ -176,6 +209,14 @@ export default function PendingTalksList({
         setIsOpen={setIsDeleteDialogOpen}
         talk={talkToDelete}
         onConfirm={confirmDeleteTalk}
+      />
+
+      {/* Dialog for status change */}
+      <StatusDialog
+        isOpen={isStatusDialogOpen}
+        setIsOpen={setIsStatusDialogOpen}
+        talk={talkToChangeStatus}
+        onChangeTalkStatus={onChangeTalkStatus}
       />
     </div>
   );

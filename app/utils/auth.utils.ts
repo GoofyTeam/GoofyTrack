@@ -12,6 +12,11 @@ export function isAttendee(roleId: number | undefined): boolean {
   return roleId === ROLE_IDS.ATTENDEE;
 }
 
+export function isConferencier(roleId: number | undefined): boolean {
+  // Un conférencier peut être un SPEAKER ou un ORGANIZER
+  return roleId === ROLE_IDS.SPEAKER || roleId === ROLE_IDS.ORGANIZER;
+}
+
 // Fonctions de conversion
 export function roleIdToRole(roleId: number): string {
   const role = roleIdMap.get(roleId);

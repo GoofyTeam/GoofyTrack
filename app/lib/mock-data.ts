@@ -128,20 +128,6 @@ export const mockData: {
   ],
 };
 
-// Constantes pour les options de formulaires
-export const topics: string[] = [
-  'Frontend',
-  'Backend',
-  'DevOps',
-  'Mobile',
-  'AI/ML',
-  'Security',
-  'Design',
-  'Programming',
-  'Architecture',
-  'Operations',
-];
-
 export const levels: LevelOption[] = [
   { value: 'beginner', label: 'Débutant' },
   { value: 'intermediate', label: 'Intermédiaire' },

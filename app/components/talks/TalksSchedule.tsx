@@ -1,5 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,101 +16,179 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Room, ScheduledTalk, Slot, Talk } from '@/lib/types';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isOrganizer } from '@/utils/auth.utils';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import type { Talk } from '@/lib/types';
 import PlanningOverview from './PlanningOverview';
-import ScheduledTalksList from './ScheduledTalksList';
+
+//
+// Define the shape coming back from /api/rooms/availability
+//
+export interface RoomWithSlots {
+  roomId: number;
+  name: string;
+  capacity: number;
+  availableSlots: Array<{
+    slotId: number;
+    startTime: string; // ISO string
+    endTime: string; // ISO string
+  }>;
+}
+
+interface Slot {
+  slotId: string;
+  roomId: string;
+  date: string; // e.g. "Fri May 16 2025"
+  startTime: string; // ISO
+  endTime: string; // ISO
+  // talkId?: string; // won’t be set here, these are all free slots
+}
 
 interface TalksScheduleProps {
   talks: Talk[];
-  scheduledTalks: ScheduledTalk[];
-  rooms: Room[];
-  slots: Slot[];
   onScheduleTalk: (talkId: string, slotId: string) => void;
 }
 
-export default function TalksSchedule({
-  talks,
-  scheduledTalks,
-  rooms,
-  slots,
-  onScheduleTalk,
-}: TalksScheduleProps) {
+// interface ScheduledSlot {
+//   id: number;
+//   roomId: number;
+//   startTime: string;
+//   endTime: string;
+//   talk: Talk;
+// }
+
+export default function TalksSchedule({ talks, onScheduleTalk }: TalksScheduleProps) {
   const session = useSession();
 
+  // — your existing selects & flags —
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [selectedTalk, setSelectedTalk] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<string>('');
+  const [isScheduling, setIsScheduling] = useState<boolean>(false);
+  // const [scheduledSlots, setScheduledSlots] = useState<ScheduledSlot[]>([]);
+
+  // — new state —
+  const [rooms, setRooms] = useState<RoomWithSlots[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]);
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
 
-  // Helper pour simplifier le placeholder du select des slots
-  const getSlotPlaceholder = (date: Date | null, roomId: string, slots: Slot[]): string => {
-    if (!date || !roomId) {
-      return "Sélectionnez d'abord une date et une salle";
-    }
+  useEffect(() => {
+    const [dateParam] = selectedDate.toISOString().split('T');
+    Promise.all([
+      fetch(`/api/rooms/availability?date=${dateParam}`).then((r) => r.json()),
+      fetch(`/api/schedules?date=${dateParam}`).then((r) => r.json()),
+      // .then((data: { schedules: ScheduledSlot[] }) => setScheduledSlots(data.schedules)),
+    ]).catch((err) => {
+      console.error(err);
+      alert('Erreur de chargement');
+    });
+  }, [selectedDate]);
 
-    if (slots.length === 0) {
-      return 'Aucun créneau disponible';
-    }
+  // 1️⃣ Fetch rooms+slots once on mount
+  useEffect(() => {
+    const [dateParam] = selectedDate.toISOString().split('T'); // "2025-05-16"
+    fetch(`/api/rooms/availability?date=${dateParam}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Impossible de charger les salles');
+        return res.json();
+      })
+      .then((data: { rooms: RoomWithSlots[] }) => {
+        setRooms(data.rooms);
 
-    return 'Sélectionner un créneau';
-  };
+        // Flatten into a single slots array for filtering
+        const flat: Slot[] = data.rooms.flatMap((room) =>
+          room.availableSlots.map((s) => ({
+            slotId: s.slotId.toString(),
+            roomId: room.roomId.toString(),
+            date: new Date(s.startTime).toDateString(),
+            startTime: s.startTime,
+            endTime: s.endTime,
+          })),
+        );
+        setSlots(flat);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert(err.message);
+      });
+  }, [selectedDate]);
 
-  // Filtrer les slots disponibles en fonction de la date et de la salle
+  // 2️⃣ Compute availableSlots whenever date/room/slots change
   useEffect(() => {
     if (selectedDate && selectedRoom) {
-      const filteredSlots = slots.filter(
-        (slot) =>
-          slot.roomId === selectedRoom &&
-          slot.date.toDateString() === selectedDate.toDateString() &&
-          !slot.talkId,
+      setAvailableSlots(
+        slots.filter((s) => s.roomId === selectedRoom && s.date === selectedDate.toDateString()),
       );
-      setAvailableSlots(filteredSlots);
     } else {
       setAvailableSlots([]);
     }
   }, [selectedDate, selectedRoom, slots]);
 
-  const handleScheduleTalk = () => {
+  const getSlotPlaceholder = (date: Date | null, roomId: string, slotsList: Slot[]): string => {
+    if (!date || !roomId) {
+      return "Sélectionnez d'abord une date et une salle";
+    }
+    return slotsList.length === 0 ? 'Aucun créneau disponible' : 'Sélectionner un créneau';
+  };
+
+  // 3️⃣ Schedule handler unchanged, except room lookup from our new rooms state
+  const handleScheduleTalk = async () => {
     if (!selectedTalk || !selectedSlot) return;
 
-    onScheduleTalk(selectedTalk, selectedSlot);
+    setIsScheduling(true);
+    try {
+      // find the slot object for its roomId, start/end
+      const slot = availableSlots.find((s) => s.slotId === selectedSlot)!;
+      const res = await fetch(`/api/talks/${selectedTalk}/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: parseInt(slot.roomId, 10),
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Échec de la planification');
+      }
 
-    // Réinitialiser les sélections
-    setSelectedTalk('');
-    setSelectedSlot('');
+      onScheduleTalk(selectedTalk, selectedSlot);
 
-    // Afficher un message de confirmation
-    const talk = talks.find((t) => t.id === selectedTalk);
-    const slot = slots.find((s) => s.id === selectedSlot);
-    if (!talk || !slot) return;
+      const talk = talks.find((t) => t.id.toString() === selectedTalk)!;
+      const room = rooms.find((r) => r.roomId === data.slot.roomId)!;
 
-    const room = rooms.find((r) => r.id === slot.roomId);
-    if (!room) return;
+      alert(
+        `Talk "${talk.title}" programmé le ${format(
+          new Date(data.slot.startTime),
+          'dd/MM/yyyy',
+        )} de ${format(new Date(data.slot.startTime), 'HH:mm')} à ${format(
+          new Date(data.slot.endTime),
+          'HH:mm',
+        )} dans ${room.name}`,
+      );
 
-    alert(
-      `Talk "${talk.title}" programmé le ${format(slot.date, 'dd/MM/yyyy')} de ${slot.startTime} à ${slot.endTime} dans la ${room.name}`,
-    );
+      setSelectedTalk('');
+      setSelectedSlot('');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsScheduling(false);
+    }
   };
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">Planification des talks</h2>
-
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Programmer un Talk</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Sélection du talk */}
+            {/* Talk select */}
             <div className="space-y-2">
               <Label htmlFor="talk">Talk à programmer</Label>
               <Select value={selectedTalk} onValueChange={setSelectedTalk}>
@@ -115,8 +197,8 @@ export default function TalksSchedule({
                 </SelectTrigger>
                 <SelectContent>
                   {talks.map((talk) => (
-                    <SelectItem key={talk.id} value={talk.id}>
-                      {talk.title} ({talk.durationMinutes} min) - {talk.level}
+                    <SelectItem key={talk.id} value={talk.id.toString()}>
+                      {talk.title} ({talk.durationMinutes} min) – {talk.level}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -125,7 +207,7 @@ export default function TalksSchedule({
 
             {isOrganizer(session.data?.user.roleId) && (
               <>
-                {/* Sélection de la date */}
+                {/* Date picker */}
                 <div className="space-y-2">
                   <Label>Date</Label>
                   <Popover>
@@ -138,25 +220,20 @@ export default function TalksSchedule({
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? (
-                          format(selectedDate, 'PPP', { locale: fr })
-                        ) : (
-                          <span>Choisir une date</span>
-                        )}
+                        {format(selectedDate, 'PPP', { locale: fr })}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
                         selected={selectedDate}
-                        initialFocus
-                        onSelect={(date) => date && setSelectedDate(date)}
+                        onSelect={(d) => d && setSelectedDate(d)}
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
 
-                {/* Sélection de la salle */}
+                {/* Room select */}
                 <div className="space-y-2">
                   <Label htmlFor="room">Salle</Label>
                   <Select value={selectedRoom} onValueChange={setSelectedRoom}>
@@ -165,8 +242,8 @@ export default function TalksSchedule({
                     </SelectTrigger>
                     <SelectContent>
                       {rooms.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name} (capacité: {room.capacity})
+                        <SelectItem key={room.roomId} value={room.roomId.toString()}>
+                          {room.name} (capacité : {room.capacity})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -175,12 +252,14 @@ export default function TalksSchedule({
               </>
             )}
 
-            {/* Sélection du créneau */}
+            {/* Slot select */}
             <div className="space-y-2">
               <Label htmlFor="slot">Créneau horaire</Label>
               <Select
-                disabled={!selectedDate || !selectedRoom || availableSlots.length === 0}
                 value={selectedSlot}
+                disabled={
+                  !selectedDate || !selectedRoom || availableSlots.length === 0 || isScheduling
+                }
                 onValueChange={setSelectedSlot}
               >
                 <SelectTrigger id="slot">
@@ -190,8 +269,9 @@ export default function TalksSchedule({
                 </SelectTrigger>
                 <SelectContent>
                   {availableSlots.map((slot) => (
-                    <SelectItem key={slot.id} value={slot.id}>
-                      {slot.startTime} - {slot.endTime}
+                    <SelectItem key={slot.slotId} value={slot.slotId}>
+                      {format(new Date(slot.startTime), 'HH:mm')} –{' '}
+                      {format(new Date(slot.endTime), 'HH:mm')}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -200,19 +280,18 @@ export default function TalksSchedule({
 
             <Button
               className="w-full"
-              disabled={!selectedTalk || !selectedSlot}
+              disabled={!selectedTalk || !selectedSlot || isScheduling}
               onClick={handleScheduleTalk}
             >
-              Programmer le talk
+              {isScheduling ? 'Programmation…' : 'Programmer le talk'}
             </Button>
           </CardContent>
         </Card>
-
-        <ScheduledTalksList scheduledTalks={scheduledTalks} />
       </div>
-
-      {/* Vue d'ensemble du planning */}
-      <PlanningOverview rooms={rooms} scheduledTalks={scheduledTalks} />
+      <PlanningOverview
+        rooms={rooms.map(({ roomId, name }) => ({ roomId, name }))}
+        date={selectedDate}
+      />
     </div>
   );
 }

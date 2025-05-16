@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { roleToRoleId } from '@/utils/auth.utils';
 import bcrypt from 'bcrypt';
 import NextAuth, { User } from 'next-auth';
+import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 declare module 'next-auth' {
@@ -20,7 +21,7 @@ interface ExtendedUser extends User {
   roleId: number;
 }
 
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
@@ -113,4 +114,6 @@ export default NextAuth({
       return token;
     },
   },
-});
+};
+
+export default NextAuth(authOptions);
