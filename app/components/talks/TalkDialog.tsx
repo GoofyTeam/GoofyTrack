@@ -58,7 +58,9 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
   useEffect(() => {
     if (!isOpen) return;
     if (!session?.user?.id) throw new Error('User ID is required');
-    setCurrentTalk(isNew ? { ...emptyTalk, speakerId: session.user.id } : { ...(talk as Talk) });
+    setCurrentTalk(
+      isNew ? { ...emptyTalk, speakerId: Number(session.user.id) } : { ...(talk as Talk) },
+    );
   }, [isOpen, isNew, talk, session]);
 
   const handleInputChange = (field: keyof Omit<Talk, 'id'>, value: string | number | TalkLevel) => {
@@ -72,7 +74,7 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
       title: currentTalk.title,
       description: currentTalk.description,
       topic: currentTalk.topic,
-      durationMinutes: currentTalk.durationMinutes,
+      durationMinutes: currentTalk.duration,
       level: currentTalk.level,
     };
 
@@ -166,11 +168,9 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
             <div className="space-y-2">
               <Label htmlFor="duration">Durée</Label>
               <Select
-                value={
-                  currentTalk.durationMinutes != null ? currentTalk.durationMinutes.toString() : ''
-                }
+                value={currentTalk.duration != null ? currentTalk.duration.toString() : ''}
                 required
-                onValueChange={(v) => handleInputChange('durationMinutes', parseInt(v, 10))}
+                onValueChange={(v) => handleInputChange('duration', parseInt(v, 10))}
               >
                 <SelectTrigger id="duration">
                   <SelectValue placeholder="Sélectionner une durée" />

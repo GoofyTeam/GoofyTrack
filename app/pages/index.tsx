@@ -25,12 +25,9 @@ export default function TalksPage() {
       setLoading(true);
       setError(null);
 
-      // choose endpoint: authenticated speakers -> /api/talks/me; everything else -> public /api/talks
       let endpoint = '/api/talks';
-      if (status === 'authenticated') {
-        if (isSpeaker(session!.user.roleId)) {
-          endpoint = '/api/talks/me';
-        }
+      if (isSpeaker(session?.user.roleId) || isOrganizer(session?.user.roleId)) {
+        endpoint = '/api/talks/me';
       }
 
       try {
@@ -38,8 +35,6 @@ export default function TalksPage() {
         if (!res.ok) throw new Error(`Error: ${res.status}`);
         const { talks: fetched } = await res.json();
         setTalks(fetched);
-        // console.log('session:', session);
-        // console.log('fetched talks:', fetched);
       } catch (err) {
         if (err instanceof Error) {
           console.error(err);
@@ -58,7 +53,7 @@ export default function TalksPage() {
 
   // Fonction pour programmer un talk
   const scheduleTalk = (talkId: string, slotId: string) => {
-    const talk = talks.find((t) => t.id === talkId);
+    const talk = talks.find((t) => String(t.id) === talkId);
     const slot = mockData.slots.find((s) => s.id === slotId);
 
     if (!talk || !slot) return;
@@ -75,7 +70,7 @@ export default function TalksPage() {
   const addTalk = (newTalk: Omit<Talk, 'id'>) => {
     const talkWithId = {
       ...newTalk,
-      id: Date.now().toString(),
+      id: Date.now(),
     } as Talk;
     setTalks((prev) => [...prev, talkWithId]);
   };
@@ -87,7 +82,7 @@ export default function TalksPage() {
   const deleteTalk = async (talkId: string) => {
     const res = await fetch(`/api/talks/${talkId}`, { method: 'DELETE' });
     if (res.ok) {
-      setTalks((prev) => prev.filter((t) => t.id !== talkId));
+      setTalks((prev) => prev.filter((t) => String(t.id) !== talkId));
     } else {
       const err = await res.json();
       console.error('Failed to delete talk:', err.error);
@@ -153,7 +148,7 @@ export default function TalksPage() {
 
         {/* Tab: Liste des talks */}
         <TabsContent value="talks">
-          {isSpeaker(session?.user?.roleId) ? (
+          {isSpeaker(session?.user?.roleId) || isOrganizer(session?.user?.roleId) ? (
             <MyTalksList
               talks={talks}
               onAddTalk={addTalk}

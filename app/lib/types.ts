@@ -7,14 +7,37 @@ export type TalkStatus = 'pending' | 'accepted' | 'rejected' | 'scheduled';
 export type TalkLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export interface Talk {
-  id: string;
+  id: number;
   title: string;
-  topic: string;
   description: string;
-  durationMinutes: number;
+  duration: number;
   level: TalkLevel;
   status: TalkStatus;
-  speakerId: string;
+  speakerId: number;
+  subjectId: number;
+  createdAt: string;
+  updatedAt: string;
+  subjects?: {
+    id: number;
+    name: string;
+    created_at: string;
+  };
+  schedules?: Array<{
+    id: number;
+    talk_id: number;
+    room_id: number;
+    start_time: string;
+    end_time: string;
+    created_at: string;
+    updated_at: string;
+  }>;
+  // feedback?: any[];
+  // favorites?: any[];
+  users?: {
+    id: number;
+    username: string;
+    email: string;
+  };
 }
 
 export interface Room {
