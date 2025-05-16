@@ -104,12 +104,6 @@ export default function AcceptedTalksList({
     return uniqueTopics;
   }, [talks]);
 
-  const handleCreateTalk = () => {
-    setIsNewTalk(true);
-    setCurrentTalk(null);
-    setIsDialogOpen(true);
-  };
-
   const handleEditTalk = (talk: Talk) => {
     setCurrentTalk(talk);
     setIsNewTalk(false);
