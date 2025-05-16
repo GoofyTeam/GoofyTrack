@@ -7,13 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Talk, TalkStatus } from '@/lib/types';
 import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
 import { useSession } from 'next-auth/react';
-import { mockData } from '@/lib/mock-data';
-import MyTalksList from '@/components/talks/MyTalksList';
 
 export default function TalksPage() {
   const { data: session, status } = useSession();
   const [talks, setTalks] = useState<Talk[]>([]);
-  // const [scheduledTalks, setScheduledTalks] = useState<ScheduledTalk[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,18 +49,14 @@ export default function TalksPage() {
   }, [status, session?.user.roleId]);
 
   // Fonction pour programmer un talk
-  const scheduleTalk = (talkId: string, slotId: string) => {
+  const scheduleTalk = (talkId: string) => {
     const talk = talks.find((t) => String(t.id) === talkId);
-    const slot = mockData.slots.find((s) => s.id === slotId);
 
-    if (!talk || !slot) return;
+    if (!talk) return;
 
     const updatedTalk = { ...talk, status: 'scheduled' as const };
-    const updatedSlot = { ...slot, talkId: talk.id };
 
     setTalks((prev) => prev.map((t) => (t.id === talk.id ? updatedTalk : t)));
-
-    return { updatedTalk, updatedSlot };
   };
 
   // Fonctions pour gérer les talks
@@ -148,21 +141,12 @@ export default function TalksPage() {
 
         {/* Tab: Liste des talks */}
         <TabsContent value="talks">
-          {isSpeaker(session?.user?.roleId) || isOrganizer(session?.user?.roleId) ? (
-            <MyTalksList
-              talks={talks}
-              onAddTalk={addTalk}
-              onDeleteTalk={deleteTalk}
-              onUpdateTalk={updateTalk}
-            />
-          ) : (
-            <TalksList
-              talks={talks}
-              onAddTalk={addTalk}
-              onDeleteTalk={deleteTalk}
-              onUpdateTalk={updateTalk}
-            />
-          )}
+          <TalksList
+            talks={talks}
+            onAddTalk={addTalk}
+            onDeleteTalk={deleteTalk}
+            onUpdateTalk={updateTalk}
+          />
         </TabsContent>
 
         {/* Tab: Liste des talks en attente */}

@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Talk, Room } from '@/lib/types';
+import { Talk } from '@/lib/types';
 import { Pencil, Plus, Trash2, CalendarPlus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useMemo } from 'react';

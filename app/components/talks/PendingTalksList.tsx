@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { levels } from '@/lib/mock-data';
 import { Talk, TalkStatus } from '@/lib/types';
 import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
@@ -126,7 +125,7 @@ export default function PendingTalksList({
                   <CardDescription className="text-muted-foreground flex space-x-2 text-sm">
                     <span>{talk.subjects?.name}</span>
                     <span>•</span>
-                    <span>{levels.find((l) => l.value === talk.level)?.label}</span>
+                    <span>{talk.level}</span>
                     <span>•</span>
                     <span>{talk.duration} min</span>
                   </CardDescription>
