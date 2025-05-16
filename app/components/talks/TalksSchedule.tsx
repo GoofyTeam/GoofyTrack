@@ -188,7 +188,7 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
                 <SelectContent>
                   {talks.map((talk) => (
                     <SelectItem key={talk.id} value={talk.id.toString()}>
-                      {talk.title} ({talk.durationMinutes} min) – {talk.level}
+                      {talk.title} ({talk.duration} min) – {talk.level}
                     </SelectItem>
                   ))}
                 </SelectContent>
