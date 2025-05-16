@@ -47,7 +47,7 @@ interface Slot {
 
 interface TalksScheduleProps {
   talks: Talk[];
-  onScheduleTalk: (talkId: string, slotId: string) => void;
+  onScheduleTalk: (talkId: string) => void;
 }
 
 export default function TalksSchedule({ talks, onScheduleTalk }: TalksScheduleProps) {
@@ -64,17 +64,6 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
   const [rooms, setRooms] = useState<RoomWithSlots[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
-
-  useEffect(() => {
-    const [dateParam] = selectedDate.toISOString().split('T');
-    Promise.all([
-      fetch(`/api/rooms/availability?date=${dateParam}`).then((r) => r.json()),
-      fetch(`/api/schedules?date=${dateParam}`).then((r) => r.json()),
-    ]).catch((err) => {
-      console.error(err);
-      alert('Erreur de chargement');
-    });
-  }, [selectedDate]);
 
   // 1️⃣ Fetch rooms+slots once on mount
   useEffect(() => {
@@ -103,7 +92,7 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
         console.error(err);
         alert(err.message);
       });
-  }, [selectedDate]);
+  }, [selectedDate, selectedTalk]);
 
   // 2️⃣ Compute availableSlots whenever date/room/slots change
   useEffect(() => {
@@ -145,7 +134,7 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
         throw new Error(data.error || 'Échec de la planification');
       }
 
-      onScheduleTalk(selectedTalk, selectedSlot);
+      onScheduleTalk(selectedTalk);
 
       const talk = talks.find((t) => t.id.toString() === selectedTalk)!;
       const room = rooms.find((r) => r.roomId === data.slot.roomId)!;
@@ -162,8 +151,8 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
 
       setSelectedTalk('');
       setSelectedSlot('');
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      alert(err);
     } finally {
       setIsScheduling(false);
     }

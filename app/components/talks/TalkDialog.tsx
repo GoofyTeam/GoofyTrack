@@ -19,28 +19,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { durations, emptyTalk, levels } from '@/lib/mock-data';
 import { Talk, TalkLevel } from '@/lib/types';
 import { useSession } from 'next-auth/react';
 import { FormEvent, useEffect, useState } from 'react';
 
-// form subjects (must match your DB subjects.name)
-export const subjects = [
-  'JavaScript',
-  'TypeScript',
-  'React',
-  'Next.js',
-  'Node.js',
-  'Prisma',
-  'GraphQL',
-  'DevOps',
-  'Architecture',
-  'UX/UI',
-  'Mobile',
-  'Security',
-  'Testing',
-  'Performance',
-  'Accessibility',
+const durations = [
+  { value: 30, label: '30 minutes' },
+  { value: 60, label: '1 heure' },
+  { value: 120, label: '2 heures' },
+  { value: 180, label: '3 heures' },
+  { value: 240, label: '4 heures' },
+  { value: 300, label: '5 heures' },
+  { value: 360, label: '6 heures' },
+  { value: 420, label: '7 heures' },
+  { value: 480, label: '8 heures' },
+  { value: 540, label: '9 heures' },
+  { value: 600, label: '10 heures' },
+  { value: 660, label: '11 heures' },
 ];
 
 interface TalkDialogProps {
@@ -53,17 +48,51 @@ interface TalkDialogProps {
 
 export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: TalkDialogProps) {
   const { data: session } = useSession();
-  const [currentTalk, setCurrentTalk] = useState<Omit<Talk, 'id'>>(emptyTalk);
+  const emptyTalk = {
+    id: 0,
+    title: '',
+    description: '',
+    topic: '',
+    duration: 30,
+    level: 'beginner',
+    speakerId: 0,
+  };
+  const [currentTalk, setCurrentTalk] = useState(emptyTalk);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [levels, setLevels] = useState<{ value: TalkLevel; label: string }[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
     if (!session?.user?.id) throw new Error('User ID is required');
-    setCurrentTalk(
-      isNew ? { ...emptyTalk, speakerId: Number(session.user.id) } : { ...(talk as Talk) },
-    );
+    if (isNew) {
+      setCurrentTalk({ ...emptyTalk, speakerId: Number(session.user.id) });
+    } else if (talk) {
+      setCurrentTalk({
+        id: talk.id,
+        title: talk.title,
+        description: talk.description,
+        topic: talk.subjects?.name || '',
+        duration: talk.duration,
+        level: talk.level,
+        speakerId: talk.speakerId,
+      });
+    } else {
+      setCurrentTalk(emptyTalk);
+    }
+
+    // Fetch subjects
+    fetch('/api/references/subjects')
+      .then((res) => res.json())
+      .then((data) => setSubjects(Array.isArray(data) ? data : []))
+      .catch(() => setSubjects([]));
+    // Fetch levels
+    fetch('/api/references/talkLevels')
+      .then((res) => res.json())
+      .then((data) => setLevels(Array.isArray(data) ? data : []))
+      .catch(() => setLevels([]));
   }, [isOpen, isNew, talk, session]);
 
-  const handleInputChange = (field: keyof Omit<Talk, 'id'>, value: string | number | TalkLevel) => {
+  const handleInputChange = (field: string, value: string | number | TalkLevel) => {
     setCurrentTalk({ ...currentTalk, [field]: value });
   };
 
