@@ -119,10 +119,24 @@ export default function TalksPage() {
   }
 
   if (loading) {
-    return <div>Loading talks...</div>;
+    return (
+      <div className="container mx-auto space-y-8 p-4">
+        <Header />
+        <div className="flex h-96 items-center justify-center">
+          <div>Loading talks...</div>
+        </div>
+      </div>
+    );
   }
   if (error) {
-    return <div>Error loading talks: {error}</div>;
+    return (
+      <div className="container mx-auto space-y-8 p-4">
+        <Header />
+        <div className="flex h-96 items-center justify-center">
+          <div>Error loading talks: {error}</div>
+        </div>
+      </div>
+    );
   }
 
   return (
