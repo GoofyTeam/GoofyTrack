@@ -38,7 +38,7 @@ export default function StatusDialog({
 
   const handleSave = () => {
     if (talk) {
-      onChangeTalkStatus(talk.id, selectedStatus);
+      onChangeTalkStatus(String(talk.id), selectedStatus);
       setIsOpen(false);
       // Reset state
       // setSelectedStartDate(undefined);
