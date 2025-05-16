@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (session) {
         const userId = parseInt(session.user.id, 10);
-        const user = await prisma.users.findUnique({
+        const user = await prisma.user.findUnique({
           where: { id: userId },
           include: { roles: true },
         });

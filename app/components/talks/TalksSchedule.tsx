@@ -289,8 +289,8 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
         </Card>
       </div>
       <PlanningOverview
-        rooms={rooms.map(({ roomId, name }) => ({ roomId, name }))}
         date={selectedDate}
+        rooms={rooms.map(({ roomId, name }) => ({ roomId, name }))}
       />
     </div>
   );

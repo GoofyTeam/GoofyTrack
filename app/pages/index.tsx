@@ -7,6 +7,7 @@ import { Room, ScheduledTalk, Slot, Talk } from '@/lib/types';
 import { isOrganizer } from '@/utils/auth.utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
+import clsx from 'clsx';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
@@ -305,7 +306,10 @@ export default function TalksPage() {
       <Tabs defaultValue="talks">
         {/* Navigation différente selon le rôle */}
         <TabsList
-          className={`grid w-full grid-cols-${isOrganizer(session.data?.user?.roleId) ? '3' : '1'}`}
+          className={clsx(
+            'grid w-full',
+            isOrganizer(session.data?.user?.roleId) ? 'grid-cols-3' : 'grid-cols-1',
+          )}
         >
           <TabsTrigger value="talks">Tous les talks</TabsTrigger>
           {isOrganizer(session.data?.user?.roleId) && (
