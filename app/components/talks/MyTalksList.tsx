@@ -10,9 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { levels } from '@/lib/mock-data';
 import { Talk, Room } from '@/lib/types';
-import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
 import { Pencil, Plus, Trash2, CalendarPlus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useMemo } from 'react';
@@ -25,16 +23,13 @@ interface MyTalksListProps {
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
   onUpdateTalk: (talk: Talk) => void;
   onDeleteTalk: (talkId: string) => void;
-  // scheduledTalks: ScheduledTalk[];
-  rooms?: Room[];
-  // topics: string[];
 }
 
 // Helper to generate Google Calendar event link
 function getGoogleCalendarUrl(talk: Talk) {
   // For demo, use current date/time as start, and add duration
   const start = new Date();
-  const end = new Date(start.getTime() + (talk.durationMinutes || 30) * 60000);
+  const end = new Date(start.getTime() + (talk.duration || 30) * 60000);
 
   function formatDate(d: Date) {
     // YYYYMMDDTHHmmssZ
@@ -57,9 +52,6 @@ export default function MyTalksList({
   onAddTalk,
   onUpdateTalk,
   onDeleteTalk,
-  // scheduledTalks,
-  rooms = [],
-  // topics,
 }: MyTalksListProps) {
   const session = useSession();
 
@@ -73,25 +65,17 @@ export default function MyTalksList({
   const [filterDuration, setFilterDuration] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
   const [filterRoom, setFilterRoom] = useState('');
-  const [filterDate, setFilterDate] = useState('');
 
   const filteredScheduledTalks = useMemo(() => {
     return talks.filter((talk) => {
       let ok = true;
-      if (filterTopic && talk.topic !== filterTopic) ok = false;
-      if (filterDuration && String(talk.durationMinutes) !== filterDuration) ok = false;
+      if (filterTopic && talk.subjects?.name !== filterTopic) ok = false;
+      if (filterDuration && String(talk.duration) !== filterDuration) ok = false;
       if (filterLevel && talk.level !== filterLevel) ok = false;
       return ok;
     });
     // }, [scheduledTalks, filterTopic, filterDuration, filterLevel, filterRoom, filterDate]);
-  }, [talks, filterTopic, filterDuration, filterLevel, filterRoom, filterDate]);
-
-  const topics = useMemo(() => {
-    const allTopics = talks.map((talk) => talk.topic);
-    const uniqueTopics = Array.from(new Set(allTopics));
-
-    return uniqueTopics;
-  }, [talks]);
+  }, [talks, filterTopic, filterDuration, filterLevel, filterRoom]);
 
   const handleCreateTalk = () => {
     setIsNewTalk(true);
@@ -112,31 +96,46 @@ export default function MyTalksList({
 
   const confirmDeleteTalk = () => {
     if (talkToDelete) {
-      onDeleteTalk(talkToDelete.id);
+      onDeleteTalk(talkToDelete.id.toString());
       setIsDeleteDialogOpen(false);
       setTalkToDelete(null);
     }
   };
 
-  const saveTalk = (talk: Omit<Talk, 'id'> & { id?: string }) => {
+  const saveTalk = (talk: Talk) => {
     if (isNewTalk) {
-      onAddTalk(talk);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, ...talkWithoutId } = talk;
+      onAddTalk(talkWithoutId);
     } else {
-      onUpdateTalk(talk as Talk);
+      onUpdateTalk(talk);
     }
     setIsDialogOpen(false);
   };
+
+  const [levels, rooms, topics] = useMemo(() => {
+    const uniqueLevels = Array.from(new Set(talks.map((talk) => talk.level)));
+    const uniqueTopics = Array.from(new Set(talks.map((talk) => talk.subjects?.name)));
+
+    const allSchedules = talks.flatMap((talk) => talk.schedules || []);
+    const uniqueRoomIds = new Set<number>();
+    allSchedules.forEach((schedule) => {
+      if (schedule.room_id) {
+        uniqueRoomIds.add(schedule.room_id);
+      }
+    });
+    const uniqueRooms = Array.from(uniqueRoomIds);
+
+    return [uniqueLevels, uniqueRooms, uniqueTopics];
+  }, []);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Tous mes talks</h2>
-        {session.data?.user &&
-          (isOrganizer(session.data.user.roleId) || isSpeaker(session.data.user.roleId)) && (
-            <Button onClick={handleCreateTalk}>
-              <Plus className="mr-2 h-4 w-4" /> Nouveau Talk
-            </Button>
-          )}
+        <Button onClick={handleCreateTalk}>
+          <Plus className="mr-2 h-4 w-4" /> Nouveau Talk
+        </Button>
       </div>
 
       <div className="mb-2 flex flex-wrap gap-4">
@@ -158,7 +157,7 @@ export default function MyTalksList({
           onChange={(e) => setFilterDuration(e.target.value)}
         >
           <option value="">Durée</option>
-          {[...new Set(talks.map((talk) => talk.durationMinutes))].map((d) => (
+          {[...new Set(talks.map((talk) => talk.duration))].map((d) => (
             <option key={d} value={d}>
               {d} min
             </option>
@@ -171,8 +170,8 @@ export default function MyTalksList({
         >
           <option value="">Niveau</option>
           {levels.map((l) => (
-            <option key={l.value} value={l.value}>
-              {l.label}
+            <option key={l} value={l}>
+              {l.charAt(0).toUpperCase() + l.slice(1)}
             </option>
           ))}
         </select>
@@ -183,18 +182,11 @@ export default function MyTalksList({
         >
           <option value="">Salle</option>
           {rooms.map((room) => (
-            <option key={room.id} value={room.id}>
-              {room.name}
+            <option key={room} value={room}>
+              {room}
             </option>
           ))}
         </select>
-        <input
-          className="rounded border px-2 py-1"
-          min={new Date().toISOString().slice(0, 10)}
-          type="date"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-        />
       </div>
 
       {filteredScheduledTalks.length === 0 ? (
@@ -211,27 +203,27 @@ export default function MyTalksList({
                   <StatusBadge status={talk.status} />
                 </div>
                 <CardDescription className="text-muted-foreground flex space-x-2 text-sm">
-                  <span>{talk.topic}</span>
+                  <span>{talk.subjects?.name}</span>
                   <span>•</span>
-                  <span>{levels.find((l) => l.value === talk.level)?.label}</span>
+                  <span>{talk.level.charAt(0).toUpperCase() + talk.level.slice(1)}</span>
                   <span>•</span>
-                  <span>{talk.durationMinutes} min</span>
+                  <span>{talk.duration} min</span>
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-muted-foreground line-clamp-3 text-sm">{talk.description}</p>
               </CardContent>
               <CardFooter className="flex justify-between pt-2">
-                <div className="flex space-x-2">
-                  <>
+                {talk.speakerId.toString() === session.data?.user.id && (
+                  <div className="flex space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleEditTalk(talk)}>
                       <Pencil className="mr-1 h-4 w-4" /> Modifier
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => handleDeleteTalk(talk)}>
                       <Trash2 className="mr-1 h-4 w-4" /> Supprimer
                     </Button>
-                  </>
-                </div>
+                  </div>
+                )}
                 {talk.status === 'scheduled' && (
                   <a href={getGoogleCalendarUrl(talk)} rel="noopener noreferrer" target="_blank">
                     <Button size="sm" variant="outline">

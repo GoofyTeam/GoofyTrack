@@ -58,17 +58,21 @@ const PlanningTable: React.FC = () => {
       });
   }, [date]);
 
-  // Build all possible timeslots from 09:00 to 19:00
+  // Build all possible timeslots from 09:00 to 19:00, but exclude slots in the past
   const timeSlots = useMemo(() => {
     const slots: { start: Date; end: Date; label: string }[] = [];
     const day = date.toISOString().slice(0, 10);
+    const now = new Date();
     for (let hour = 9; hour < 19; hour++) {
       const start = new Date(`${day}T${String(hour).padStart(2, '0')}:00:00`);
       const end = new Date(`${day}T${String(hour + 1).padStart(2, '0')}:00:00`);
-      const startLabel = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
-      const endLabel = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
-      const label = `${startLabel} - ${endLabel}`;
-      slots.push({ start, end, label });
+      // Only include slots that are not in the past
+      if (start >= now || date.toDateString() !== now.toDateString()) {
+        const startLabel = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+        const endLabel = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+        const label = `${startLabel} - ${endLabel}`;
+        slots.push({ start, end, label });
+      }
     }
     return slots;
   }, [date]);
@@ -86,6 +90,7 @@ const PlanningTable: React.FC = () => {
         <input
           className="rounded border px-2 py-1"
           id="schedule-date"
+          min={new Date().toISOString().slice(0, 10)}
           type="date"
           value={date.toISOString().slice(0, 10)}
           onChange={handleDateChange}
