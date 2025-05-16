@@ -9,6 +9,7 @@ import { isOrganizer, isSpeaker } from '@/utils/auth.utils';
 import { useSession } from 'next-auth/react';
 import { mockData } from '@/lib/mock-data';
 import MyTalksList from '@/components/talks/MyTalksList';
+import AcceptedTalksList from '@/components/talks/AcceptedTalksList';
 
 export default function TalksPage() {
   const { data: session, status } = useSession();
@@ -170,13 +171,22 @@ export default function TalksPage() {
 
         {/* Tab: Planification */}
         <TabsContent value="schedule">
-          <TalksSchedule
-            // rooms={mockData.rooms}
-            // scheduledTalks={scheduledTalks}
-            // slots={mockData.slots}
-            talks={talks.filter((talk) => talk.status === 'accepted')}
-            onScheduleTalk={scheduleTalk}
-          />
+          <>
+            <AcceptedTalksList
+              talks={talks}
+              onAddTalk={addTalk}
+              onDeleteTalk={deleteTalk}
+              onUpdateTalk={updateTalk}
+            />
+            <div className='py-8'/>
+            <TalksSchedule
+              // rooms={mockData.rooms}
+              // scheduledTalks={scheduledTalks}
+              // slots={mockData.slots}
+              talks={talks.filter((talk) => talk.status === 'accepted')}
+              onScheduleTalk={scheduleTalk}
+            />
+          </>
         </TabsContent>
       </Tabs>
     </div>

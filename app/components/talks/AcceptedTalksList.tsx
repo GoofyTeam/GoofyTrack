@@ -1,4 +1,4 @@
-// components/talks/MyTalksList.tsx
+// components/talks/AcceptedTalksList.tsx
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,8 @@ import { useState, useMemo } from 'react';
 import DeleteDialog from './DeleteDialog';
 import StatusBadge from './StatusBadge';
 import TalkDialog from './TalkDialog';
-import PlanningTable from './PlanningOverview';
 
-interface MyTalksListProps {
+interface AcceptedTalksListProps {
   talks: Talk[];
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
   onUpdateTalk: (talk: Talk) => void;
@@ -53,7 +52,7 @@ function getGoogleCalendarUrl(talk: Talk) {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-export default function MyTalksList({
+export default function AcceptedTalksList({
   talks,
   onAddTalk,
   onUpdateTalk,
@@ -61,7 +60,7 @@ export default function MyTalksList({
   // scheduledTalks,
   rooms = [],
   // topics,
-}: MyTalksListProps) {
+}: AcceptedTalksListProps) {
   const session = useSession();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -77,6 +76,18 @@ export default function MyTalksList({
   const [filterDate, setFilterDate] = useState('');
 
   const filteredScheduledTalks = useMemo(() => {
+    // return scheduledTalks.filtæer((st) => {
+    //   const { talk } = st;
+    //   const { slot } = st;
+    //   const { room } = st;
+    //   let ok = true;
+    //   if (filterTopic && talk.topic !== filterTopic) ok = false;
+    //   if (filterDuration && String(talk.durationMinutes) !== filterDuration) ok = false;
+    //   if (filterLevel && talk.level !== filterLevel) ok = false;
+    //   if (filterRoom && room.id !== filterRoom) ok = false;
+    //   if (filterDate && slot.date.toISOString().slice(0, 10) !== filterDate) ok = false;
+    //   return ok;
+    // });
     return talks.filter((talk) => {
       let ok = true;
       if (filterTopic && talk.topic !== filterTopic) ok = false;
@@ -131,13 +142,8 @@ export default function MyTalksList({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Tous mes talks</h2>
-        {session.data?.user &&
-          (isOrganizer(session.data.user.roleId) || isSpeaker(session.data.user.roleId)) && (
-            <Button onClick={handleCreateTalk}>
-              <Plus className="mr-2 h-4 w-4" /> Nouveau Talk
-            </Button>
-          )}
+        <h2 className="text-xl font-semibold">Talks acceptés</h2>
+
       </div>
 
       <div className="mb-2 flex flex-wrap gap-4">
@@ -204,45 +210,63 @@ export default function MyTalksList({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredScheduledTalks.map((talk) => (
-            <Card key={talk.id} className="flex h-full flex-col">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{talk.title}</CardTitle>
-                  <StatusBadge status={talk.status} />
-                </div>
-                <CardDescription className="text-muted-foreground flex space-x-2 text-sm">
-                  <span>{talk.topic}</span>
-                  <span>•</span>
-                  <span>{levels.find((l) => l.value === talk.level)?.label}</span>
-                  <span>•</span>
-                  <span>{talk.durationMinutes} min</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="text-muted-foreground line-clamp-3 text-sm">{talk.description}</p>
-              </CardContent>
-              <CardFooter className="flex justify-between pt-2">
-                <div className="flex space-x-2">
-                  <>
-                    <Button size="sm" variant="outline" onClick={() => handleEditTalk(talk)}>
-                      <Pencil className="mr-1 h-4 w-4" /> Modifier
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDeleteTalk(talk)}>
-                      <Trash2 className="mr-1 h-4 w-4" /> Supprimer
-                    </Button>
-                  </>
-                </div>
-                {talk.status === 'accepted' && (
-                  <a href={getGoogleCalendarUrl(talk)} rel="noopener noreferrer" target="_blank">
-                    <Button size="sm" variant="outline">
-                      <CalendarPlus className="mr-1 h-4 w-4" /> Ajouter à Google Calendar
-                    </Button>
-                  </a>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
+          {filteredScheduledTalks
+            // .filter((st) => {
+            //   const { talk } = st;
+            .filter((talk) => {
+              // const { talk } = st;
+              if (session.data?.user.id === talk.speakerId) {
+                return true;
+              }
+              return talk.status === 'accepted';
+            })
+            // .map(({ talk }) => (
+            .map((talk) => (
+              <Card key={talk.id} className="flex h-full flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <CardTitle className="text-lg">{talk.title}</CardTitle>
+                    <StatusBadge status={talk.status} />
+                  </div>
+                  <CardDescription className="text-muted-foreground flex space-x-2 text-sm">
+                    <span>{talk.topic}</span>
+                    <span>•</span>
+                    <span>{levels.find((l) => l.value === talk.level)?.label}</span>
+                    <span>•</span>
+                    <span>{talk.durationMinutes} min</span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-muted-foreground line-clamp-3 text-sm">{talk.description}</p>
+                </CardContent>
+                <CardFooter className="flex justify-between pt-2">
+                  <div className="flex space-x-2">
+                    {session.status === 'authenticated' &&
+                      session.data?.user.id === talk.speakerId && (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => handleEditTalk(talk)}>
+                            <Pencil className="mr-1 h-4 w-4" /> Modifier
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteTalk(talk)}
+                          >
+                            <Trash2 className="mr-1 h-4 w-4" /> Supprimer
+                          </Button>
+                        </>
+                      )}
+                  </div>
+                  {talk.status === 'accepted' && (
+                    <a href={getGoogleCalendarUrl(talk)} rel="noopener noreferrer" target="_blank">
+                      <Button size="sm" variant="outline">
+                        <CalendarPlus className="mr-1 h-4 w-4" /> Ajouter à Google Calendar
+                      </Button>
+                    </a>
+                  )}
+                </CardFooter>
+              </Card>
+            ))}
         </div>
       )}
 
@@ -260,8 +284,6 @@ export default function MyTalksList({
         talk={talkToDelete}
         onConfirm={confirmDeleteTalk}
       />
-
-      <PlanningTable />
     </div>
   );
 }
