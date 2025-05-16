@@ -74,7 +74,7 @@ export default function TalkDialog({ isOpen, setIsOpen, talk, isNew, onSave }: T
         topic: talk.subjects?.name || '',
         duration: talk.duration,
         level: talk.level,
-        speakerId: talk.speakerId,
+        speakerId: talk.speaker_id,
       });
     } else {
       setCurrentTalk(emptyTalk);

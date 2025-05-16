@@ -13,10 +13,10 @@ export interface Talk {
   duration: number;
   level: TalkLevel;
   status: TalkStatus;
-  speakerId: number;
-  subjectId: number;
-  createdAt: string;
-  updatedAt: string;
+  speaker_id: number;
+  subject_id: number;
+  created_at: string;
+  updated_at: string;
   subjects?: {
     id: number;
     name: string;
@@ -31,8 +31,8 @@ export interface Talk {
     created_at: string;
     updated_at: string;
   }>;
-  // feedback?: any[];
-  // favorites?: any[];
+  feedback?: any[];
+  favorites?: any[];
   users?: {
     id: number;
     username: string;

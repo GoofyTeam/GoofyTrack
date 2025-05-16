@@ -1,4 +1,3 @@
-// components/talks/MyTalksList.tsx
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,7 @@ import DeleteDialog from './DeleteDialog';
 import StatusBadge from './StatusBadge';
 import TalkDialog from './TalkDialog';
 
-interface MyTalksListProps {
+interface TalksListProps {
   talks: Talk[];
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
   onUpdateTalk: (talk: Talk) => void;
@@ -47,12 +46,12 @@ function getGoogleCalendarUrl(talk: Talk) {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-export default function MyTalksList({
+export default function TalksList({
   talks,
   onAddTalk,
   onUpdateTalk,
   onDeleteTalk,
-}: MyTalksListProps) {
+}: TalksListProps) {
   const session = useSession();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -214,7 +213,7 @@ export default function MyTalksList({
                 <p className="text-muted-foreground line-clamp-3 text-sm">{talk.description}</p>
               </CardContent>
               <CardFooter className="flex justify-between pt-2">
-                {talk.speakerId.toString() === session.data?.user.id && (
+                {talk.speaker_id && talk.speaker_id.toString() === session.data?.user.id && (
                   <div className="flex space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleEditTalk(talk)}>
                       <Pencil className="mr-1 h-4 w-4" /> Modifier

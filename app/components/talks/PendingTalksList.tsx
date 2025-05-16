@@ -136,7 +136,7 @@ export default function PendingTalksList({
                 <CardFooter className="flex justify-between pt-2">
                   <div className="flex space-x-2">
                     {session.status === 'authenticated' &&
-                      String(session.data?.user.id) === String(talk.speakerId) && (
+                      String(session.data?.user.id) === String(talk.speaker_id) && (
                         <>
                           <Button size="sm" variant="outline" onClick={() => handleEditTalk(talk)}>
                             <Pencil className="mr-1 h-4 w-4" /> Modifier
