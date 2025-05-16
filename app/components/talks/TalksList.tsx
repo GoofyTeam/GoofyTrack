@@ -223,7 +223,7 @@ export default function TalksList({
               if (session.data?.user.id === talk.speakerId) {
                 return true;
               }
-              return talk.status === 'accepted';
+              return talk.status === 'scheduled';
             })
             // .map(({ talk }) => (
             .map((talk) => (
