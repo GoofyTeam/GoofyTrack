@@ -8,24 +8,8 @@ import type { Prisma } from '@prisma/client';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // 1) For GET, decide which talks to show based on role
   if (req.method === 'GET') {
-    // try to get a session (if any)
-    const session = await getServerSession(req, res, authOptions);
-
     // now strongly typed
-    let filter: Prisma.talksWhereInput = { status: 'accepted' };
-
-    if (session) {
-      const userId = parseInt(session.user.id, 10);
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: { roles: true },
-      });
-
-      // if the user is an organizer, show everything
-      if (user?.roles.name === 'organizer') {
-        filter = {}; // {} is a valid TalksWhereInput
-      }
-    }
+    const filter: Prisma.talksWhereInput = { status: 'scheduled' };
 
     const talks = await prisma.talks.findMany({
       where: filter,
