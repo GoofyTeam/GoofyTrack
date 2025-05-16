@@ -25,9 +25,7 @@ interface TalksListProps {
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
   onUpdateTalk: (talk: Talk) => void;
   onDeleteTalk: (talkId: string) => void;
-  // scheduledTalks: ScheduledTalk[];
   rooms?: Room[];
-  // topics: string[];
 }
 
 // Helper to generate Google Calendar event link
@@ -57,9 +55,7 @@ export default function TalksList({
   onAddTalk,
   onUpdateTalk,
   onDeleteTalk,
-  // scheduledTalks,
   rooms = [],
-  // topics,
 }: TalksListProps) {
   const session = useSession();
 

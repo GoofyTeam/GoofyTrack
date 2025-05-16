@@ -67,14 +67,6 @@ export default function TalksPage() {
     const updatedSlot = { ...slot, talkId: talk.id };
 
     setTalks((prev) => prev.map((t) => (t.id === talk.id ? updatedTalk : t)));
-    // setScheduledTalks((prev) => [
-    //   ...prev,
-    //   {
-    //     talk: updatedTalk,
-    //     slot: updatedSlot,
-    //     room: mockData.rooms.find((r) => r.id === slot.roomId)!,
-    //   },
-    // ]);
 
     return { updatedTalk, updatedSlot };
   };
@@ -99,12 +91,8 @@ export default function TalksPage() {
     } else {
       const err = await res.json();
       console.error('Failed to delete talk:', err.error);
-      // optionally show a toast/snackbar here
     }
   };
-  // const changeTalkStatus = (talkId: string, newStatus: Talk['status']) => {
-  //   setTalks((prev) => prev.map((t) => (t.id === talkId ? { ...t, status: newStatus } : t)));
-  // };
 
   async function changeTalkStatus(talkId: string, newStatus: TalkStatus) {
     const res = await fetch(`/api/talks/${talkId}/status`, {
@@ -148,7 +136,18 @@ export default function TalksPage() {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="talks">Tous les talks</TabsTrigger>
             <TabsTrigger value="pending">Tous les talks en attente</TabsTrigger>
-            <TabsTrigger value="schedule">Planification</TabsTrigger>
+            <TabsTrigger value="schedule">
+              Planification
+              <span
+                className={`ml-2 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  talks.filter((talk) => talk.status === 'accepted').length === 0
+                    ? 'bg-gray-400 text-white'
+                    : 'bg-red-600 text-white'
+                }`}
+              >
+                {talks.filter((talk) => talk.status === 'accepted').length}
+              </span>
+            </TabsTrigger>
           </TabsList>
         )}
 
@@ -185,9 +184,6 @@ export default function TalksPage() {
         {/* Tab: Planification */}
         <TabsContent value="schedule">
           <TalksSchedule
-            // rooms={mockData.rooms}
-            // scheduledTalks={scheduledTalks}
-            // slots={mockData.slots}
             talks={talks.filter((talk) => talk.status === 'accepted')}
             onScheduleTalk={scheduleTalk}
           />

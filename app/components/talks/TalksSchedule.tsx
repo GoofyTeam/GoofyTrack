@@ -50,14 +50,6 @@ interface TalksScheduleProps {
   onScheduleTalk: (talkId: string, slotId: string) => void;
 }
 
-// interface ScheduledSlot {
-//   id: number;
-//   roomId: number;
-//   startTime: string;
-//   endTime: string;
-//   talk: Talk;
-// }
-
 export default function TalksSchedule({ talks, onScheduleTalk }: TalksScheduleProps) {
   const session = useSession();
 
@@ -67,7 +59,6 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
   const [selectedTalk, setSelectedTalk] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [isScheduling, setIsScheduling] = useState<boolean>(false);
-  // const [scheduledSlots, setScheduledSlots] = useState<ScheduledSlot[]>([]);
 
   // — new state —
   const [rooms, setRooms] = useState<RoomWithSlots[]>([]);
@@ -79,7 +70,6 @@ export default function TalksSchedule({ talks, onScheduleTalk }: TalksSchedulePr
     Promise.all([
       fetch(`/api/rooms/availability?date=${dateParam}`).then((r) => r.json()),
       fetch(`/api/schedules?date=${dateParam}`).then((r) => r.json()),
-      // .then((data: { schedules: ScheduledSlot[] }) => setScheduledSlots(data.schedules)),
     ]).catch((err) => {
       console.error(err);
       alert('Erreur de chargement');

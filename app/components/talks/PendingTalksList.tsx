@@ -21,35 +21,6 @@ import StatusBadge from './StatusBadge';
 import StatusDialog from './StatusDialog';
 import TalkDialog from './TalkDialog';
 
-// Mock data for rooms (you should replace this with your actual data)
-// const rooms = [
-//   {
-//     name: 'Salle Amphithéâtre',
-//     capacity: 300,
-//     description: 'Grande salle principale pour les keynotes et sessions populaires',
-//   },
-//   {
-//     name: 'Salle Ateliers',
-//     capacity: 100,
-//     description: 'Salle équipée pour les ateliers pratiques et hands-on labs',
-//   },
-//   {
-//     name: 'Salle Conférences A',
-//     capacity: 150,
-//     description: 'Salle de conférence standard pour les présentations techniques',
-//   },
-//   {
-//     name: 'Salle Conférences B',
-//     capacity: 150,
-//     description: 'Salle de conférence standard pour les présentations techniques',
-//   },
-//   {
-//     name: 'Salle Innovation',
-//     capacity: 80,
-//     description: 'Espace dédié aux démonstrations et nouvelles technologies',
-//   },
-// ];
-
 interface PendingTalksListProps {
   talks: Talk[];
   onAddTalk: (talk: Omit<Talk, 'id'>) => void;
