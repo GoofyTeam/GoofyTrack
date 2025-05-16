@@ -1,4 +1,5 @@
 import { rejectTalk } from '@/services/scheduleService';
+import { asApiError } from '@/types/error';
 import { isOrganizer } from '@/utils/auth.utils';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
@@ -39,8 +40,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rejectResult = await rejectTalk(talkId, req);
 
     return res.status(200).json(rejectResult);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
-    return res.status(500).json({ error: errorMessage });
+  } catch (error: unknown) {
+    const apiError = asApiError(error);
+    return res
+      .status(apiError.status || 500)
+      .json({ error: apiError.message || 'Une erreur est survenue' });
   }
 }

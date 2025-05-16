@@ -1,4 +1,5 @@
 import { getRooms } from '@/services/referenceDataService';
+import { asApiError } from '@/types/error';
 import { NextApiRequest, NextApiResponse } from 'next';
 
 /**
@@ -13,8 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const rooms = await getRooms();
     return res.status(200).json(rooms);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
-    return res.status(500).json({ error: errorMessage });
+  } catch (error: unknown) {
+    const apiError = asApiError(error);
+    return res
+      .status(apiError.status || 500)
+      .json({ error: apiError.message || 'Une erreur est survenue' });
   }
 }
